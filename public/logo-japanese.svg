@@ -1,0 +1,24 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="gradJP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadowJP">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Circle background -->
+  <circle cx="100" cy="100" r="80" fill="url(#gradJP)" opacity="0.1"/>
+
+  <!-- 作 (tsuku/saku) = "to create/make" -->
+  <g filter="url(#shadowJP)">
+    <text x="100" y="135" font-family="'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif"
+          font-size="90" font-weight="bold" fill="url(#gradJP)" text-anchor="middle">作</text>
+  </g>
+
+  <!-- Small "tsuku" text -->
+  <text x="100" y="165" font-family="Arial, sans-serif" font-size="12"
+        fill="#999" text-anchor="middle" opacity="0.7">tsuku</text>
+</svg>

@@ -1,0 +1,30 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="gradV2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadowV2">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Combined @{T} -->
+  <g filter="url(#shadowV2)">
+    <!-- @ symbol -->
+    <text x="50" y="125" font-family="Arial, sans-serif" font-size="60" font-weight="bold"
+          fill="url(#gradV2)">@</text>
+
+    <!-- Left brace -->
+    <path d="M 95 65 Q 88 65 88 72 L 88 90 Q 88 97 82 97 Q 88 97 88 104 L 88 122 Q 88 129 95 129"
+          stroke="url(#gradV2)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- T -->
+    <text x="120" y="120" font-family="Arial, sans-serif" font-size="60" font-weight="bold"
+          fill="url(#gradV2)" text-anchor="middle">T</text>
+
+    <!-- Right brace -->
+    <path d="M 145 65 Q 152 65 152 72 L 152 90 Q 152 97 158 97 Q 152 97 152 104 L 152 122 Q 152 129 145 129"
+          stroke="url(#gradV2)" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,26 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="gradHira" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadowHira">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- つく (hiragana) with braces -->
+  <g filter="url(#shadowHira)">
+    <!-- Left brace -->
+    <path d="M 45 60 Q 38 60 38 67 L 38 87 Q 38 94 32 94 Q 38 94 38 101 L 38 121 Q 38 128 45 128"
+          stroke="url(#gradHira)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- つく in hiragana -->
+    <text x="100" y="125" font-family="'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif"
+          font-size="70" font-weight="500" fill="url(#gradHira)" text-anchor="middle">つく</text>
+
+    <!-- Right brace -->
+    <path d="M 155 60 Q 162 60 162 67 L 162 87 Q 162 94 168 94 Q 162 94 162 101 L 162 121 Q 162 128 155 128"
+          stroke="url(#gradHira)" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,30 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="gradAtJP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadowAtJP">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- @{作} - combining @ with Japanese -->
+  <g filter="url(#shadowAtJP)">
+    <!-- @ symbol -->
+    <text x="45" y="125" font-family="Arial, sans-serif" font-size="60" font-weight="bold"
+          fill="url(#gradAtJP)">@</text>
+
+    <!-- Left brace -->
+    <path d="M 92 65 Q 85 65 85 72 L 85 90 Q 85 97 79 97 Q 85 97 85 104 L 85 122 Q 85 129 92 129"
+          stroke="url(#gradAtJP)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- 作 (create) -->
+    <text x="125" y="125" font-family="'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif"
+          font-size="65" font-weight="bold" fill="url(#gradAtJP)" text-anchor="middle">作</text>
+
+    <!-- Right brace -->
+    <path d="M 158 65 Q 165 65 165 72 L 165 90 Q 165 97 171 97 Q 165 97 165 104 L 165 122 Q 165 129 158 129"
+          stroke="url(#gradAtJP)" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

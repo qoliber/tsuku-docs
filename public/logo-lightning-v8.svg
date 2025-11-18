@@ -1,0 +1,19 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background rounded rectangle with opacity -->
+  <rect x="10" y="10" width="80" height="80" rx="10" fill="#667eea" opacity="0.1"/>
+
+  <!-- Border frame -->
+  <rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="#667eea" stroke-width="3"/>
+
+  <!-- Lightning + Transformation concept -->
+  <g fill="#667eea" stroke="#667eea">
+    <!-- Input symbol (left) -->
+    <rect x="25" y="43" width="10" height="14" rx="1" fill="none" stroke-width="2"/>
+
+    <!-- Lightning bolt (transformation) -->
+    <path d="M 48 40 L 44 50 L 47 50 L 42 60" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Output symbol (right) - filled to show completion -->
+    <rect x="65" y="43" width="10" height="14" rx="1" stroke-width="2"/>
+  </g>
+</svg>

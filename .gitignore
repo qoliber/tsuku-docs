@@ -1,0 +1,27 @@
+.idea/
+.vscode/
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# VitePress
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Build
+build/
+
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
