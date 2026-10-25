@@ -254,7 +254,7 @@ class Compiler implements NodeVisitor, DirectiveVisitor {
 - `Compiler` - Main compiler class (implements `NodeVisitor` and `DirectiveVisitor`)
 - `FunctionRegistry` - Manages template functions
 - `DirectiveRegistry` - Manages custom block directives
-- `FormatterRegistry` - Stores formatters (not used by any template syntax in 1.4.0)
+- `FormatterRegistry` - Stores formatters (not used by any template syntax; `registerFormatter()` also registers the handler as a function since 1.4.1)
 
 ## Benefits of This Architecture
 

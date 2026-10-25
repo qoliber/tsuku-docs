@@ -78,7 +78,8 @@ public function register(string $name, callable $handler): void
 **Returns:**
 - void
 
-The name is not validated. Names that the template lexer reads as something else - names starting with `end`, `else` or `default`, the built-in directive names, names with `-` or `.` - can be registered but never called from a template; see [Function Names](/api/tsuku#function-names).
+**Throws:**
+- `\InvalidArgumentException` - For a name that a template could never call: names starting with `end`, `else` or `default` (other than `default` itself), the built-in directive names, names with `-` or `.`; see [Function Names](/api/tsuku#function-names). Up to 1.4.0 such names were registered and never called.
 
 **Example:**
 

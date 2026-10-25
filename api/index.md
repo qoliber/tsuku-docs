@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API documentation for Tsuku classes and methods (1.4.0).
+Complete API documentation for Tsuku classes and methods (1.4.1).
 
 ## Overview
 
@@ -23,10 +23,10 @@ $result = $tsuku->process($template, $data);
 - `__construct(StrictnessMode $strictnessMode = StrictnessMode::SILENT, DirectiveRegistry $directiveRegistry = new DirectiveRegistry(), FormatterRegistry $formatterRegistry = new FormatterRegistry(), FunctionRegistry $functionRegistry = new FunctionRegistry())`
 - `process(string $template, array $data, ?StrictnessMode $strictnessMode = null): string` - Process a template with data
 - `processToStream(string $template, array $contextData, iterable $rows, string $rowsVariable, callable $writer, ?StrictnessMode $strictnessMode = null): void` - Render row by row through a writer ([Streaming](/guide/streaming))
-- `getWarnings(): array`, `hasWarnings(): bool` - Warnings of the last call in `WARNING` mode
-- `registerFunction(string $name, callable $handler): self` - Register a custom function
+- `getWarnings(): array`, `hasWarnings(): bool` - Warnings of the last call in `WARNING` mode (the instance's mode or the call's)
+- `registerFunction(string $name, callable $handler): self` - Register a custom function; `\InvalidArgumentException` for a name that can never be called
 - `registerDirective(string $name, callable $handler): self` - Register a custom block directive ([Custom Directives](/guide/custom-directives))
-- `registerFormatter(string $name, callable $handler): self` - Stores a formatter; no template syntax uses formatters in 1.4.0
+- `registerFormatter(string $name, callable $handler): self` - Deprecated since 1.4.1: registers the handler as a function, like `registerFunction()`
 
 ### [FunctionRegistry →](/api/function-registry)
 
@@ -318,10 +318,10 @@ Qoliber\Tsuku\Exception\TsukuException
 ├── FunctionNotFoundException   unknown function in a condition or in FunctionRegistry::execute(); getFunctionName()
 ├── DirectiveNotFoundException  DirectiveRegistry::get() / a Compiler without the directive's handler
 ├── FormatterNotFoundException  FormatterRegistry::get()
-└── InvalidTemplateException    defined, not thrown by Tsuku 1.4.0
+└── InvalidTemplateException    defined, not thrown by Tsuku
 ```
 
-`TsukuException` itself is thrown in `STRICT` mode (a missing `{variable}`, an unknown function in output, a function or directive handler error). Outside this hierarchy: `registerDirective()` throws `\InvalidArgumentException` for invalid or reserved names, `processToStream()` throws `\RuntimeException` when the streamed `@for` is missing or ambiguous, and an exception thrown by a function **inside a condition** reaches you unchanged.
+`TsukuException` itself is thrown in `STRICT` mode (a missing `{variable}`, an unknown function in output, a function or directive handler error). A function that throws **inside a condition** is handled the same way (in `SILENT` and `WARNING` mode the condition sees `null`). Outside this hierarchy: `registerDirective()`, `registerFunction()` and `registerFormatter()` throw `\InvalidArgumentException` for names that can never be called, and `processToStream()` throws `\RuntimeException` when the streamed `@for` is missing or ambiguous.
 
 **Example:**
 

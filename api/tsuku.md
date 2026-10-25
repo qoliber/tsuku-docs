@@ -122,8 +122,8 @@ $result = $tsuku->process($template, $data);
 
 Each call lexes and parses the template again; nothing is cached between calls.
 
-::: warning Per-call strictness and warnings
-When you pass `$strictnessMode`, warnings of that call are recorded in a temporary context and are **not** available through `getWarnings()` afterwards. If you need the warnings, set the mode in the constructor instead.
+::: tip Per-call strictness and warnings
+Warnings of a call made with `$strictnessMode` are returned by `getWarnings()` afterwards, like those of the instance's own mode. Up to 1.4.0 they were lost.
 :::
 
 ### `processToStream()`
@@ -215,11 +215,14 @@ public function registerFunction(string $name, callable $handler): self
 ```
 
 **Parameters:**
-- `$name` (string) - Function name, used as `@name(...)` in templates
+- `$name` (string) - Function name, used as `@name(...)` in templates (see [Function Names](#function-names))
 - `$handler` (callable) - Receives the resolved arguments; its return value is printed
 
 **Returns:**
 - `self` - so calls can be chained
+
+**Throws:**
+- `\InvalidArgumentException` - For a name the template could never call
 
 **Example:**
 
@@ -242,28 +245,34 @@ $result = $tsuku->process($template, ['price' => 99.99]);
 - Arguments: quoted strings as strings, number literals as strings (`"2"`), variables with their PHP type (arrays stay arrays, a missing variable becomes `""`), nested function calls with their result.
 - PHP coerces arguments to typed parameters as usual (`"2"` → `int 2`); a `TypeError` is a handler error (see below).
 - The return value is cast to string: `null` and `false` print nothing, `true` prints `1`, a `Stringable` object its string, an array prints `Array` (with a PHP warning).
-- A return type is not required, and the name is not validated when registering.
+- A return type is not required.
 - Registering an existing name (also a built-in such as `upper`) replaces it. There is no way to unregister a function.
-- An exception thrown by the handler in output follows the strictness mode: removed (`SILENT`), recorded as `Function 'name' error: ...` (`WARNING`), or rethrown as `TsukuException` (`STRICT`). Inside a condition it propagates unchanged.
+- An exception thrown by the handler follows the strictness mode: removed (`SILENT`), recorded as `Function 'name' error: ...` (`WARNING`), or rethrown as `TsukuException` with the original as `getPrevious()` (`STRICT`). Inside a condition the function's result is `null` in `SILENT` and `WARNING` mode.
 
 #### Function Names
 
-`registerFunction()` accepts any string, but the template lexer decides what `@name(` means. A function can only be called when its name
+The template lexer decides what `@name(` means, so `registerFunction()` throws an `InvalidArgumentException` unless the name
 
-- is an identifier: letters, digits and `_`, not starting with a digit (`format_price`, `customFunc123`);
+- is an identifier: letters, digits and `_`, not starting with a digit (`format_price`, `customFunc123`), so not `my-function` or `my.function`;
 - does not start with `end` or `else` - those are read as `@end` / `@else` (`@ends_with(...)` is `@end` followed by text);
 - does not start with `default`, except `default` itself - `@defaults(...)` is `@default`;
-- is not `for`, `if`, `unless`, `match`, `case` or `elseif`;
-- is not also registered as a custom directive (a directive wins).
+- is not `for`, `if`, `unless`, `match`, `case`, `elseif`, `else` or `end`.
 
 ```php
 $tsuku->registerFunction('ends_with', fn(string $text, string $suffix): string => str_ends_with($text, $suffix) ? 'yes' : 'no');
-
-$tsuku->process('@ends_with(sku, "-X")', ['sku' => 'A-X']);
-// Throws: ParseException: Unexpected @end at line 1, column 1
+// Throws: InvalidArgumentException: Function name 'ends_with' cannot be called: @ends_with(...) is read as the @end directive followed by text. Choose a name that does not start with 'end'
 ```
 
-Names are case-sensitive (`@Upper` is not `@upper`). Hyphens or dots (`my-function`, `my.function`) cannot be called either: `@my-function(...)` is a `ParseException` ("Invalid @ syntax").
+With another name it works:
+
+```php
+$tsuku->registerFunction('has_suffix', fn(string $text, string $suffix): string => str_ends_with($text, $suffix) ? 'yes' : 'no');
+
+echo $tsuku->process('@has_suffix(sku, "-X")', ['sku' => 'A-X']);
+// Output: yes
+```
+
+Names are case-sensitive (`@Upper` is not `@upper`). A function is not callable either when a custom directive has the same name: the directive wins. Up to 1.4.0 `registerFunction()` accepted every name, and these functions never ran.
 
 ### `registerDirective()`
 
@@ -300,16 +309,20 @@ Handler errors follow the strictness mode like function errors (`Directive 'name
 public function registerFormatter(string $name, callable $handler): self
 ```
 
-Stores the handler in the instance's `FormatterRegistry`. In 1.4.0 no template syntax uses formatters, so a registered formatter has no effect on the output - `@money(price)` after `registerFormatter('money', ...)` is still an unknown function:
+::: warning Deprecated
+Since 1.4.1. Use [`registerFunction()`](#registerfunction), which this method now calls.
+:::
+
+Registers the handler as a function, so it is called as `@name(...)`, and also stores it in the instance's `FormatterRegistry`. The name follows the [function name rules](#function-names), and a name that is already a function (also a built-in such as `upper`) replaces it:
 
 ```php
 $tsuku->registerFormatter('money', fn($value) => '$' . $value);
 
 echo $tsuku->process('[@money(price)]', ['price' => 5]);
-// Output: []
+// Output: [$5]
 ```
 
-Use `registerFunction()` for anything you want to call from a template.
+Up to 1.4.0 the handler was only stored: no template syntax used formatters, and `@money(price)` printed nothing.
 
 ## Complete Example
 

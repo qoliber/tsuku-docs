@@ -63,7 +63,7 @@ If you see "Hello, World!" - you're all set! 🎉
 
 ## Version Information
 
-This documentation describes **Tsuku 1.4.0**. Check your installed version:
+This documentation describes **Tsuku 1.4.1**. Check your installed version:
 
 ```bash
 composer show qoliber/tsuku

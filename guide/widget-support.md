@@ -468,7 +468,7 @@ $tsuku->registerFunction('product_widget', function(
 
 ### 5. Pick Callable Names
 
-Function names are used as `@name(...)`. Names that start with `end`, `else` or `default`, and the directive names `for`, `if`, `unless`, `match`, `case`, `elseif`, can be registered but never called - the template reads them as directives. `@widget(...)`, `@cms_block(...)` and `@product_widget(...)` are fine.
+Function names are used as `@name(...)`. Names that start with `end`, `else` or `default` (other than `default` itself), and the directive names `for`, `if`, `unless`, `match`, `case`, `elseif`, `else`, `end`, are refused by `registerFunction()` with an `InvalidArgumentException`, because the template would read them as directives. `@widget(...)`, `@cms_block(...)` and `@product_widget(...)` are fine.
 
 ## Converting Magento Templates
 

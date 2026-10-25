@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9b2f9b7779d13d14816c83c2950598a8",
+    "content-hash": "aab2a683624ba48d98d730999d34f6ca",
     "packages": [
         {
             "name": "qoliber/tsuku",
-            "version": "v1.4.0",
+            "version": "v1.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/qoliber/tsuku.git",
-                "reference": "0498bd7309e30dfecc9d547bda6e328d2a02221a"
+                "reference": "5d2756c662879b992f969150ab45f01acc442a92"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/qoliber/tsuku/zipball/0498bd7309e30dfecc9d547bda6e328d2a02221a",
-                "reference": "0498bd7309e30dfecc9d547bda6e328d2a02221a",
+                "url": "https://api.github.com/repos/qoliber/tsuku/zipball/5d2756c662879b992f969150ab45f01acc442a92",
+                "reference": "5d2756c662879b992f969150ab45f01acc442a92",
                 "shasum": ""
             },
             "require": {
@@ -57,9 +57,9 @@
             ],
             "support": {
                 "issues": "https://github.com/qoliber/tsuku/issues",
-                "source": "https://github.com/qoliber/tsuku/tree/v1.4.0"
+                "source": "https://github.com/qoliber/tsuku/tree/v1.4.1"
             },
-            "time": "2026-10-25T09:58:54+00:00"
+            "time": "2026-10-25T19:16:14+00:00"
         }
     ],
     "packages-dev": [],

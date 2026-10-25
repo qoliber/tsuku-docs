@@ -79,9 +79,9 @@ $csv = $tsuku->process($template, $data);
 - `@url()` - URL encoding
 - `@json()` - JSON-safe escaping
 
-## Current Version: 1.4.0
+## Current Version: 1.4.1
 
-Tsuku 1.4.0 adds real boolean conditions (`and`/`&&`, `or`/`||`, `not`/`!`, parentheses, `in`/`not in`), `@elseif`, predictable [whitespace control](/guide/whitespace-control), working [custom block directives](/guide/custom-directives), `@@` for a literal `@`, and `ParseException`s with line and column for malformed conditions. [Streaming](/guide/streaming) with `processToStream()` arrived in 1.3.0.
+Tsuku 1.4.1 fixes six bugs of 1.4.0 (see the [Changelog](/changelog)). Tsuku 1.4.0 added real boolean conditions (`and`/`&&`, `or`/`||`, `not`/`!`, parentheses, `in`/`not in`), `@elseif`, predictable [whitespace control](/guide/whitespace-control), working [custom block directives](/guide/custom-directives), `@@` for a literal `@`, and `ParseException`s with line and column for malformed conditions. [Streaming](/guide/streaming) with `processToStream()` arrived in 1.3.0.
 
 Coming from 1.3? Some output changes - see [Upgrading from 1.3](/guide/upgrading) and the [Changelog](/changelog).
 
@@ -104,7 +104,7 @@ This is the same architecture used by:
 
 **Performance**: Single-pass compilation with efficient AST walking
 
-**Reliability**: 848 tests, 99.4% line coverage, 98.7% mutation score (1.4.0)
+**Reliability**: 944 tests, 99.4% line coverage, 98.8% mutation score (1.4.1)
 
 **Maintainability**: Clean separation of concerns
 

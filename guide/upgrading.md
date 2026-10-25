@@ -6,6 +6,31 @@ Tsuku 1.4.0 is a drop-in upgrade for PHP code: no public method was removed or r
 composer require qoliber/tsuku:^1.4
 ```
 
+## Upgrading to 1.4.1
+
+1.4.1 fixes bugs of 1.4.0 and needs no template or code changes in most projects; `^1.4` installs it. Four fixes can change what you see:
+
+- **Uncallable function names throw when registered.** `registerFunction()` and `registerFormatter()` throw an `InvalidArgumentException` for names such as `my-func`, `if`, `endpoint` or `default_price` (see [Function Names](/guide/custom-functions#function-names)). Those functions never ran in 1.4.0; rename them.
+- **`\"` in a double-quoted string prints `"`.** `@concat("say \"hi\"")` printed `say \"hi\"` in 1.4.0 and prints `say "hi"` now. A template that relied on the backslash being printed must drop it.
+- **`registerFormatter()` registers a function.** `registerFormatter('upper', ...)`, or any name of an existing function, now replaces that function, as `registerFunction()` does.
+- **Function errors in conditions follow the strictness mode.** In `SILENT` and `WARNING` mode, an exception thrown by a function inside a condition no longer leaves `process()`; the condition sees `null`. In `STRICT` mode it is a `TsukuException` (with the original exception as `getPrevious()`) instead of the original exception. Code that caught the original exception around `process()` must catch `TsukuException` and read `getPrevious()`, or use `STRICT` mode.
+
+```php
+$tsuku = new Tsuku(StrictnessMode::STRICT);
+$tsuku->registerFunction('stock', function (string $sku): int {
+    throw new \RuntimeException('stock API timeout');
+});
+
+try {
+    $tsuku->process('@if(@stock(sku) > 0)In stock@end', ['sku' => 'A-1']);
+} catch (TsukuException $e) {
+    echo $e->getMessage();                // Function 'stock' error: stock API timeout
+    echo $e->getPrevious()->getMessage(); // stock API timeout
+}
+```
+
+The other fixes only turn wrong or empty output into the expected output: per-call `WARNING` warnings are returned by `getWarnings()`, and `@substr()`, `@replace()`, `@strtotime()`, `@date()`, `@number()` and `@join()` accept numbers from the data. The [changelog](/changelog) has the details.
+
 ## Checklist
 
 1. Before upgrading, render every template you use with representative data and save the output.

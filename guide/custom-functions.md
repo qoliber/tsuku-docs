@@ -336,7 +336,7 @@ Each argument is resolved before your function is called:
 
 | Argument in the template | Your function receives |
 |--------------------------|------------------------|
-| `"text"` or `'text'` | the string, quotes removed (backslashes are kept as written) |
+| `"text"` or `'text'` | the string, quotes removed; `\"` inside `"..."` and `\'` inside `'...'` are quotes, every other backslash is kept as written |
 | `42`, `4.5` | the **string** `"42"`, `"4.5"` |
 | `product.qty`, `items` | the value with its PHP type (int, array, object, bool, ...) |
 | a variable that does not exist | `""` (empty string) |
@@ -372,17 +372,22 @@ Return arrays only from functions that feed other functions, such as `@join(@plu
 
 ## Function Names
 
-Names are case-sensitive and must look like identifiers (`[a-zA-Z_][a-zA-Z0-9_]*`) to be callable; `@` must be followed directly by the name and the name directly by `(`. `registerFunction()` does not validate names, so a name that can never be called is accepted silently:
+Names are case-sensitive and must look like identifiers (`[a-zA-Z_][a-zA-Z0-9_]*`); `@` must be followed directly by the name and the name directly by `(`. `registerFunction()` throws an `InvalidArgumentException` for a name that the template could never call:
 
 | Name | Why it cannot be called |
 |------|-------------------------|
-| `my-fn`, `my.fn`, `2col` | not an identifier: `@my-fn(...)` throws `ParseException` "Invalid @ syntax" |
-| `if`, `for`, `unless`, `match`, `case`, `elseif` | `@if(...)` etc. are directives |
-| anything starting with `end` (`endpoint`) | read as `@end` |
+| `my-fn`, `my.fn`, `2col` | not an identifier |
+| `if`, `for`, `unless`, `match`, `case`, `elseif`, `else`, `end` | built-in directives |
+| anything starting with `end` (`endpoint`) | `@endpoint(...)` is read as `@end` followed by the text `point(...)` |
 | anything starting with `else` (`else_label`) | read as `@else` |
 | anything starting with `default` except `default` itself (`default_price`) | read as `@default` |
 
-Names such as `iffy`, `forward`, `cases` or `format123` are fine.
+```php
+$tsuku->registerFunction('endpoint', fn($path) => '/api/' . $path);
+// Throws: InvalidArgumentException: Function name 'endpoint' cannot be called: @endpoint(...) is read as the @end directive followed by text. Choose a name that does not start with 'end'
+```
+
+Names such as `iffy`, `forward`, `cases` or `format123` are fine. Up to 1.4.0 these names were accepted and the function never ran.
 
 You can replace a built-in function by registering the same name:
 
@@ -412,7 +417,7 @@ $result = $tsuku->process($template, $data);
 Two rules differ from functions in output:
 
 - An unknown function in a condition throws `FunctionNotFoundException` when the template is parsed, in every strictness mode (in output, an unknown function prints nothing in SILENT mode).
-- An exception thrown by your function inside a condition is not caught: it reaches your code unchanged, whatever the strictness mode.
+- An exception thrown by your function inside a condition follows the strictness mode, as in the output, and the condition sees `null` as the result in `SILENT` and `WARNING` mode (see [Functions that throw inside conditions](/guide/strictness#functions-that-throw-inside-conditions)).
 
 See [Conditionals](/guide/conditionals) and [Strictness Modes & Errors](/guide/strictness).
 

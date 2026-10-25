@@ -11,6 +11,8 @@ A function call is `@name(argument, argument, ...)`. Each argument is one of:
 - a variable path: `product.price` - the value from your data, with its type (arrays stay arrays); a missing variable is passed as `""`
 - another function call: `@upper(@trim(name))`
 
+Functions that work on text accept numbers and booleans from your data and convert them to strings (`true` is `"1"`, a missing value `""`): `@substr()`, `@replace()`, `@strtotime()`, the format of `@date()`, the separators of `@number()` / `@number_format()` and the glue of `@join()`. So `@substr(sku, 0, 3)` works for an integer SKU. Up to 1.4.0 a number there was a `TypeError`, and the call printed nothing in `SILENT` mode.
+
 Inside a condition (`@if(@length(items) > 2)`) arguments follow the condition rules instead: numbers are passed as numbers and a missing variable as `null`.
 
 There are no array literals (`[1, 2]`) and no arithmetic (`qty * price`) in templates. Pass arrays in your data (or build one with [`@split()`](#split)), calculate values in PHP before rendering, or register a [custom function](/guide/custom-functions).
@@ -73,6 +75,11 @@ $data = ['text' => 'Hello World'];
 // Without length (from start to end)
 $template = '@substr(text, 6)';
 // Output: World
+
+// A number from the data works too
+$template = '@substr(sku, 0, 3)';
+$data = ['sku' => 123456];
+// Output: 123
 ```
 
 ### @replace()
@@ -83,6 +90,10 @@ Replace text:
 $template = '@replace(text, "foo", "bar")';
 $data = ['text' => 'foo and foo'];
 // Output: bar and bar
+
+$template = '@replace(code, "0", "-")';
+$data = ['code' => 1001];
+// Output: 1--1
 ```
 
 ### @concat()

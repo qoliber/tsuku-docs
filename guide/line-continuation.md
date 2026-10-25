@@ -118,7 +118,7 @@ $tsuku->process($template, []);
 
 ## Backslashes Elsewhere
 
-A backslash that is **not** directly followed by a line break is ordinary text and is printed as it is - it is not an escape character for `@`, `{` or quotes (see [Escapes & Special Characters](/guide/escaping)):
+A backslash that is **not** directly followed by a line break is ordinary text and is printed as it is - it is not an escape character for `@` or `{`. The only other exception is a quote inside a quoted string: `\"` in `"..."` and `\'` in `'...'` (see [Escapes & Special Characters](/guide/escaping)):
 
 ```php
 $template = 'Windows path: C:\Program Files\App';

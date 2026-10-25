@@ -167,7 +167,7 @@ $data = ['name' => 'Widget (Pro))'];
 // Output: Widget (Pro
 ```
 
-A string can use double or single quotes. To search for a double quote, wrap it in single quotes - a backslash does **not** escape a quote inside an argument, it stays part of the value:
+A string can use double or single quotes. To put a double quote inside a string, wrap it in single quotes or write `\"` inside double quotes; inside single quotes, `\'` is a single quote:
 
 ```php
 $template = '@replace(text, \'"\', "")';
@@ -180,10 +180,10 @@ $data = ['text' => 'Say "hi"'];
 $template = '@replace(text, "\"", "")';
 
 $data = ['text' => 'Say "hi"'];
-// Output: Say "hi"
+// Output: Say hi
 ```
 
-The second template searches for the two characters `\"`, which do not occur in the text.
+The same holds for strings in conditions, `@?{...}` values and `@match` / `@case` values. Every other backslash stays part of the value: `"C:\temp"` is `C:\temp`, and `\'` inside double quotes is the two characters `\'`. Up to 1.4.0 the backslash of `\"` stayed in the value too, so the second template searched for the two characters `\"` and printed `Say "hi"`.
 
 ### Apostrophes in Text
 
@@ -201,7 +201,7 @@ $data = ['owner' => true];
 
 ## Backslashes
 
-A backslash has exactly one meaning in a Tsuku template: **`\` directly before a line break is a [line continuation](/guide/line-continuation)** - both characters are removed. Everywhere else a backslash is printed as it is; it does not escape `@`, `{`, quotes or anything else:
+A backslash has two meanings in a Tsuku template: **`\` directly before a line break is a [line continuation](/guide/line-continuation)** - both characters are removed - and inside a quoted string, `\"` (in `"..."`) or `\'` (in `'...'`) is a quote ([see above](#quotes-in-function-arguments)). Everywhere else a backslash is printed as it is; it does not escape `@`, `{` or anything else:
 
 ```php
 $template = <<<'TPL'
@@ -227,9 +227,9 @@ Mind the PHP layer: in a single-quoted PHP string `'\\'` is **one** backslash, s
 | `{` / `}` / `{ name }` / JSON / CSS braces | as is |
 | Magento `{{widget ...}}`, `{{media ...}}`, `{{trans ...}}` | as is |
 | `{name}` literally | `@concat("{", "name}")` |
-| `"` inside a function argument | `'"'` |
+| `"` inside a function argument | `'"'` or `"\""` |
 | `,` `(` `)` inside a function argument | quote the argument: `")"` |
-| a backslash | `\` (not before a line break) |
+| a backslash | `\` (not before a line break; in a quoted string, `\"` and `\'` are quotes) |
 | HTML/XML/JSON/CSV/URL-safe data | `@html()`, `@xml()`, `@json()`, `@csv()`, `@url()` - see [Security & Escaping](/guide/security) |
 :::
 

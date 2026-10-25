@@ -5,7 +5,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
-        "qoliber/tsuku": "^1.4"
+        "qoliber/tsuku": "^1.4.1"
     },
     "config": {
         "sort-packages": true

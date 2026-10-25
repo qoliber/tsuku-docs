@@ -95,6 +95,8 @@ GAD-002,"Gadget, Premium",1299.50,50
 
 1.4.0 changes some output compared to 1.3.0 (mostly whitespace around directives) - read [Upgrading from 1.3](/guide/upgrading) before you update, and the [Changelog](/changelog) for everything else.
 
+**1.4.1** is a bug-fix release: warnings of a per-call strictness mode can be read, functions that throw inside conditions follow the strictness mode, `@substr()` and friends accept numbers from the data, `\"` is a quote inside a quoted string, uncallable function names are refused when registered, and `registerFormatter()` works. See [Upgrading to 1.4.1](/guide/upgrading#upgrading-to-1-4-1).
+
 ## Why Tsuku?
 
 ### Perfect for E-commerce & Data Exports
@@ -112,7 +114,7 @@ The same architecture used by programming languages like PHP itself, JavaScript,
 
 ### Battle-Tested Quality
 
-Tsuku 1.4.0 ships with 848 tests, 99.4% line coverage and a 98.7% mutation score. Characterization tests pin the 1.3.0 behaviour that 1.4.0 keeps.
+Tsuku 1.4.1 ships with 944 tests, 99.4% line coverage and a 98.8% mutation score. Characterization tests pin the 1.3.0 behaviour that 1.4 keeps.
 
 ## Installation
 

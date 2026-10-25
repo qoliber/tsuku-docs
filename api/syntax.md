@@ -1,6 +1,6 @@
 # Syntax Reference
 
-Complete syntax reference for the Tsuku template language (1.4.0).
+Complete syntax reference for the Tsuku template language (1.4.1).
 
 ## Variables
 
@@ -330,7 +330,7 @@ Call functions using the `@` prefix. The opening parenthesis must follow the nam
 @function_name(arg1, arg2, ...)
 ```
 
-Arguments are string literals (`"..."` or `'...'`), numbers, variable paths or nested function calls. Variables keep their type (an array stays an array); a missing variable is passed as `""`; a number literal is passed as a string (`"2"`) unless the PHP parameter is typed. Quotes are respected, so `@replace(name, ")", "")` works.
+Arguments are string literals (`"..."` or `'...'`), numbers, variable paths or nested function calls. Variables keep their type (an array stays an array); a missing variable is passed as `""`; a number literal is passed as a string (`"2"`) unless the PHP parameter is typed. Quotes are respected, so `@replace(name, ")", "")` works. Inside `"..."`, `\"` is a double quote, and inside `'...'`, `\'` is a single quote; other backslashes are kept.
 
 ### Built-in Functions
 

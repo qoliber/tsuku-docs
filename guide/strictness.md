@@ -50,13 +50,13 @@ echo $tsuku->process($template, $data);
 
 ## What the Mode Controls
 
-The mode applies to exactly three situations, all in the template's **output**:
+The mode applies to exactly three situations:
 
 | Situation | Warning / exception message |
 |-----------|-----------------------------|
-| A `{variable}` that does not exist or is `null` | `Variable 'product.brand' not found in data` |
-| An `@function()` that is not registered | `Function 'money' not found` |
-| A function or [directive](/guide/custom-directives) handler that throws (including a `TypeError` from its parameter types, or a return value that cannot be converted to a string) | `Function 'stock' error: <message>` / `Directive 'cdata' error: <message>` |
+| A `{variable}` in the output that does not exist or is `null` | `Variable 'product.brand' not found in data` |
+| An `@function()` in the output that is not registered | `Function 'money' not found` |
+| A function or [directive](/guide/custom-directives) handler that throws (including a `TypeError` from its parameter types, or a return value that cannot be converted to a string), in the output, in a condition or in a value of `@?{...}` | `Function 'stock' error: <message>` / `Directive 'cdata' error: <message>` |
 
 ```php
 $tsuku = new Tsuku(StrictnessMode::WARNING);
@@ -96,7 +96,36 @@ echo $tsuku->process($template, ['product' => []]);
 
 - **Syntax errors** in the template: always a `ParseException`.
 - **Unknown functions in conditions**: always a `FunctionNotFoundException`, thrown while the template is parsed.
-- **Exceptions thrown by functions called inside conditions**: they reach your code unchanged, in every mode.
+
+### Functions that throw inside conditions
+
+A function that throws inside `@if`, `@unless`, `@elseif` or `@?{...}` is handled like one in the output. In `SILENT` mode the condition sees `null` as its result, `WARNING` mode also records the warning, and `STRICT` mode throws a `TsukuException` whose `getPrevious()` is the original exception:
+
+```php
+$tsuku = new Tsuku(StrictnessMode::WARNING);
+$tsuku->registerFunction('stock', function (string $sku): int {
+    throw new \RuntimeException('stock API timeout');
+});
+
+$template = <<<'TPL'
+@if(@stock(sku) > 0)
+In stock
+@else
+Ask us
+@end
+TPL;
+
+echo $tsuku->process($template, ['sku' => 'A-1']);
+// Output: Ask us
+
+print_r($tsuku->getWarnings());
+// Array
+// (
+//     [0] => Function 'stock' error: stock API timeout
+// )
+```
+
+`not @stock(sku)` is therefore true when `@stock()` fails, and the `@else` branch runs. If a failing function must stop the render, use `STRICT` mode. Up to 1.4.0 such exceptions reached your code unchanged, in every mode.
 
 ## Setting the Mode
 
@@ -111,17 +140,19 @@ echo $tsuku->process('Hello {name}', [], StrictnessMode::STRICT);
 
 ### Per-call mode and warnings
 
-The per-call override renders with a temporary context, so warnings recorded under it are **not** returned by `getWarnings()`:
+Warnings recorded under a per-call mode are returned by `getWarnings()` like any others. The next call starts over, in whatever mode it runs:
 
 ```php
 $tsuku = new Tsuku(); // SILENT
 
 $tsuku->process('Hello {name}', [], StrictnessMode::WARNING);
+$tsuku->getWarnings(); // ["Variable 'name' not found in data"]
 
-$tsuku->getWarnings(); // [] - the warning was recorded in the temporary context
+$tsuku->process('Hello {name}', []);
+$tsuku->getWarnings(); // [] - this call ran in SILENT mode
 ```
 
-This is a limitation of 1.4.0. If you need the warnings, create the instance in `WARNING` mode instead of overriding the mode per call.
+Up to 1.4.0 these warnings were lost: `getWarnings()` returned `[]` after a per-call `WARNING` override.
 
 ## Warnings
 
@@ -154,17 +185,17 @@ All exceptions defined by Tsuku extend `Qoliber\Tsuku\Exception\TsukuException`,
     ├── FunctionNotFoundException  unknown function in a condition, FunctionRegistry::execute()
     ├── DirectiveNotFoundException DirectiveRegistry::get() for an unknown name
     ├── FormatterNotFoundException FormatterRegistry::get() for an unknown name
-    └── InvalidTemplateException   defined, not thrown by Tsuku 1.4.0
+    └── InvalidTemplateException   defined, not thrown by Tsuku
 ```
 
 Other exceptions you can meet:
 
 | Exception | When |
 |-----------|------|
-| `\InvalidArgumentException` | `registerDirective()` with an invalid or built-in name |
+| `\InvalidArgumentException` | `registerDirective()`, `registerFunction()` or `registerFormatter()` with a name that can never be called (see [Custom Functions](/guide/custom-functions#function-names)) |
 | `\RuntimeException` | `processToStream()` when the template has no, or more than one, top-level `@for` over the streamed variable |
 | `\TypeError` | wrong PHP argument types, e.g. a string as `$rows` of `processToStream()` |
-| anything | thrown by your own functions inside conditions, or by a streaming writer |
+| anything | thrown by a streaming writer |
 
 ### ParseException
 

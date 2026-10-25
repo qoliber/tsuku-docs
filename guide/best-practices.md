@@ -656,7 +656,7 @@ $tsuku->registerFunction('format_phone', function($phone) {
 
 Arguments arrive as they are in your data (a number written in the template, like the `2` in `@substr(name, 0, 2)`, arrives as the string `"2"`); PHP converts scalars to the declared type. When the conversion fails (an array passed to a `string` parameter), the call throws a `TypeError`, which Tsuku handles like any error in a function: empty output in `SILENT` mode, a warning in `WARNING` mode, a `TsukuException` ("Function 'format_phone' error: ...") in `STRICT` mode.
 
-Do not start function names with `end`, `else` or `default`, and do not use `for`, `if`, `unless`, `match`, `case` or `elseif`: the template would read `@endpoint(...)` as `@end` and `@if(...)` as the directive. Registration does not check names - see [Custom Functions](/guide/custom-functions).
+Do not start function names with `end`, `else` or `default`, and do not use `for`, `if`, `unless`, `match`, `case` or `elseif`: the template would read `@endpoint(...)` as `@end` and `@if(...)` as the directive, so `registerFunction()` refuses them with an `InvalidArgumentException` - see [Custom Functions](/guide/custom-functions#function-names).
 
 ### Pure Functions
 
