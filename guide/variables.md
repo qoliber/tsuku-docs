@@ -62,7 +62,13 @@ $result = $tsuku->process($template, $data);
 
 ## Smart Object/Array Access
 
-Tsuku automatically detects the best way to access your data. It tries **5 strategies** in order:
+Tsuku automatically detects the best way to access your data. For every segment of a path such as `product.name` it tries these **5 strategies** in order and uses the first one that exists:
+
+1. Array key: `$product['name']`
+2. Getter method: `$product->getName()`
+3. Boolean getter: `$product->isName()`
+4. Method with the same name: `$product->name()`
+5. Public property: `$product->name`
 
 ### Strategy 1: Array Access
 
@@ -71,8 +77,9 @@ $data = [
     'product' => ['name' => 'Widget'],
 ];
 
-$template = '{product.name}';
+echo $tsuku->process('{product.name}', $data);
 // Accesses: $product['name']
+// Output: Widget
 ```
 
 ### Strategy 2: Getter Methods
@@ -88,8 +95,9 @@ class Product {
 
 $data = ['product' => new Product()];
 
-$template = '{product.name}';
+echo $tsuku->process('{product.name}', $data);
 // Calls: $product->getName()
+// Output: Widget
 ```
 
 ### Strategy 3: Boolean Getters
@@ -103,7 +111,7 @@ class Product {
 
 $data = ['product' => new Product()];
 
-$template = '{product.available}';
+echo $tsuku->process('{product.available}', $data);
 // Calls: $product->isAvailable()
 // Output: 1
 ```
@@ -119,9 +127,12 @@ class Product {
 
 $data = ['product' => new Product()];
 
-$template = '{product.total}';
-// Calls: $product->total()
+echo $tsuku->process('{product.total}', $data);
+// Calls: $product->total() - write the path without parentheses
+// Output: 99.99
 ```
+
+A path never contains parentheses: `{product.total()}` is not a variable and is printed as literal text.
 
 ### Strategy 5: Public Properties
 
@@ -132,8 +143,25 @@ class Product {
 
 $data = ['product' => new Product()];
 
-$template = '{product.name}';
+echo $tsuku->process('{product.name}', $data);
 // Accesses: $product->name
+// Output: Widget
+```
+
+Private and protected properties are never read directly - expose them through a getter.
+
+### Keys That Contain Dots
+
+If the data has a key that literally contains the dots, that key wins over the nested lookup:
+
+```php
+$data = [
+    'a.b' => 'flat key',
+    'a' => ['b' => 'nested'],
+];
+
+echo $tsuku->process('{a.b}', $data);
+// Output: flat key
 ```
 
 ## Deep Nesting
@@ -159,20 +187,32 @@ $result = $tsuku->process($template, $data);
 
 ## Missing Variables
 
-By default, missing variables output as empty strings:
+By default, missing variables output as empty strings. A value of `null` counts as missing:
 
 ```php
 $template = 'Name: {name}
-Missing: {missing}
-More text';
+Missing: [{missing}]
+Phone: [{phone}]';
 
-$data = ['name' => 'John'];
+$data = ['name' => 'John', 'phone' => null];
 
 $result = $tsuku->process($template, $data);
 // Output:
 // Name: John
-// Missing:
-// More text
+// Missing: []
+// Phone: []
+```
+
+That is the default `SILENT` [strictness mode](/guide/strictness). In `WARNING` mode the missing variable still renders empty but is reported by `getWarnings()`; in `STRICT` mode it throws:
+
+```php
+use Qoliber\Tsuku\Tsuku;
+use Qoliber\Tsuku\StrictnessMode;
+
+$tsuku = new Tsuku(StrictnessMode::STRICT);
+
+$tsuku->process('Hello {missing}', []);
+// Throws: TsukuException: Variable 'missing' not found in data
 ```
 
 ### Using @default() Function
@@ -222,6 +262,28 @@ $result = $tsuku->process($template, $data);
 // In Stock: 1
 ```
 
+## Arrays, Booleans and Numbers
+
+A variable prints its value as a string, the way PHP casts it:
+
+- numbers print as PHP prints them: `29.90` becomes `29.9` - use [`@number(price, 2)`](/guide/built-in-functions#number) for fixed decimals
+- `true` prints `1`, `false` prints nothing
+- an array prints `Array` (and PHP raises an "Array to string conversion" warning) - use `@join()` or a loop
+
+```php
+$template = 'Tags: @join(tags, ", ")
+Active: @?{active "yes" : "no"}
+Deleted: @?{deleted "yes" : "no"}';
+
+$data = ['tags' => ['sale', 'new'], 'active' => true, 'deleted' => false];
+
+echo $tsuku->process($template, $data);
+// Output:
+// Tags: sale, new
+// Active: yes
+// Deleted: no
+```
+
 ## Special Characters
 
 Variables can contain data with special characters:
@@ -240,33 +302,41 @@ $result = $tsuku->process($template, $data);
 ```
 
 ::: warning
-For HTML/XML output, always use escaping functions to prevent XSS:
+Variables are printed exactly as they are - nothing is escaped automatically. For HTML/XML output, always use escaping functions to prevent XSS:
 ```php
 $template = 'Description: @html(product.description)';
+$data = ['product' => ['description' => 'A "premium" product & more']];
 // Output: Description: A &quot;premium&quot; product &amp; more
 ```
 :::
 
 ## Variable Naming Rules
 
-Variable names must:
-- Start with a letter or underscore
-- Contain only letters, numbers, and underscores
-- Use camelCase or snake_case
+A variable is a path in curly braces:
+- Each name starts with a letter or underscore
+- It contains only letters, numbers, and underscores
+- Path segments are separated by dots; a segment after a dot may also be a number (`{items.0}`)
+- No spaces inside the braces
 
-```php
+camelCase and snake_case both work.
+
+```
 // Valid
 {name}
 {product_name}
 {productName}
 {_private}
 {item123}
+{items.0.name}
 
-// Invalid
-{123item}     // Can't start with number
-{product-name} // No hyphens allowed
+// Not a variable - printed literally, no error
+{123item}       // Can't start with number
+{product-name}  // No hyphens allowed
 {product.name!} // No special chars
+{ name }        // No spaces
 ```
+
+Because anything that is not a valid path stays literal text, JSON, CSS and Magento-style <code v-pre>{{widget ...}}</code> directives need no escaping - see [Escapes & Special Characters](/guide/escaping).
 
 ## Combining with Literals
 

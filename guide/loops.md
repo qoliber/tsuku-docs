@@ -24,7 +24,7 @@ $result = $tsuku->process($template, $data);
 
 ## Looping Over Objects
 
-Loop over arrays of objects or associative arrays:
+Loop over arrays of arrays, arrays of objects, or associative arrays:
 
 ```php
 $template = '@for(products as product)
@@ -50,6 +50,26 @@ $result = $tsuku->process($template, $data);
 // ---
 ```
 
+## What Can Be Looped Over
+
+`@for(collection as item)` takes a variable path - `products`, `order.items`, `category.products` (a getter such as `getProducts()` works too). The value must be a **PHP array**:
+
+- a list or an associative array is iterated; its items can be arrays, objects or scalars
+- a missing collection, `null`, a string, a generator, an `ArrayIterator` or a collection object renders nothing - convert it first with `iterator_to_array()` or the object's `toArray()`
+- a function call is not allowed as the collection (`@for(@split(tags) as tag)` is a `ParseException`) - prepare the array in your data
+
+```php
+$template = '[@for(items as item){item}@end]';
+
+echo $tsuku->process($template, ['items' => new ArrayIterator([1, 2])]);
+// Output: []
+
+echo $tsuku->process($template, ['items' => iterator_to_array(new ArrayIterator([1, 2]))]);
+// Output: [12]
+```
+
+For collections too large to hold in memory, render them row by row with [`processToStream()`](/guide/streaming), which accepts any iterable.
+
 ## Loop with Index/Key
 
 Access both the value and the key (value comes first, then key):
@@ -69,6 +89,8 @@ $result = $tsuku->process($template, $data);
 // 1. Banana
 // 2. Cherry
 ```
+
+The second name receives the **array key**, so a list counts from 0.
 
 ### Associative Arrays
 
@@ -241,20 +263,161 @@ $result = $tsuku->process($template, $data);
 // Done
 ```
 
+## Whitespace and Indentation
+
+Lines that hold only directives (`@for(...)`, `@if(...)`, `@end`, ...) produce no output - not their indentation, not their line break. Indent them like the markup around them; content lines keep exactly the indentation you give them:
+
+```php
+$template = '<ul>
+    @for(categories as category)
+    <li>{category.name}
+        <ul>
+            @for(category.products as product)
+            <li>{product.name}</li>
+            @end
+        </ul>
+    </li>
+    @end
+</ul>';
+
+$data = [
+    'categories' => [
+        ['name' => 'Electronics', 'products' => [['name' => 'Phone'], ['name' => 'Laptop']]],
+        ['name' => 'Books', 'products' => [['name' => 'Novel']]],
+    ],
+];
+
+echo $tsuku->process($template, $data);
+```
+
+**Output:**
+```html
+<ul>
+    <li>Electronics
+        <ul>
+            <li>Phone</li>
+            <li>Laptop</li>
+        </ul>
+    </li>
+    <li>Books
+        <ul>
+            <li>Novel</li>
+        </ul>
+    </li>
+</ul>
+```
+
+A loop can also sit inside a line. The body of a `@for` is never trimmed, so it renders exactly as written:
+
+```php
+$template = 'Tags: @for(tags as tag)[{tag}]@end
+Done';
+
+echo $tsuku->process($template, ['tags' => ['sale', 'new']]);
+// Output:
+// Tags: [sale][new]
+// Done
+```
+
+The full rules are in [Whitespace Control](/guide/whitespace-control).
+
+## Variables Inside a Loop
+
+The loop body sees all your data plus the loop variables. A loop variable with the same name as an outer value hides it inside the loop only:
+
+```php
+$template = '@for(items as name)
+{name} {greeting}
+@end
+After: {name}';
+
+$data = ['items' => ['Ann', 'Bob'], 'name' => 'outer', 'greeting' => 'says hi'];
+
+echo $tsuku->process($template, $data);
+// Output:
+// Ann says hi
+// Bob says hi
+// After: outer
+```
+
 ## Performance Considerations
 
-1. **Large datasets**: Tsuku processes templates in a single pass - very efficient
+1. **Large datasets**: Tsuku processes templates in a single pass; for exports with hundreds of thousands of rows use [`processToStream()`](/guide/streaming) so only one row is in memory at a time
 2. **Deep nesting**: Unlimited nesting depth, but keep reasonable for readability
 3. **Object creation**: If looping thousands of objects with getters, consider caching
 
 ## Common Patterns
 
+Templates have no arithmetic and no `loop.first` / `loop.last` helpers. The patterns below cover the usual needs with the array key, a little preparation in PHP, or a custom function.
+
 ### Numbered List
+
+`{index + 1}` is not supported - there is no arithmetic in templates (it is printed as literal text). Re-key the list so it starts at 1:
+
+```php
+$template = '@for(items as item, number)
+{number}. {item}
+@end';
+
+// Keys 1, 2, 3 - from a plain list: array_combine(range(1, count($list)), $list)
+$data = ['items' => [1 => 'Apple', 2 => 'Banana', 3 => 'Cherry']];
+
+echo $tsuku->process($template, $data);
+// Output:
+// 1. Apple
+// 2. Banana
+// 3. Cherry
+```
+
+Or register a small function and keep the list as it is:
+
+```php
+$tsuku->registerFunction('position', fn($index) => $index + 1);
+
+$template = '@for(items as item, index)
+@position(index). {item}
+@end';
+
+echo $tsuku->process($template, ['items' => ['Apple', 'Banana']]);
+// Output:
+// 1. Apple
+// 2. Banana
+```
+
+### First and Last Item
+
+The key of a list tells you the first item:
 
 ```php
 $template = '@for(items as item, index)
-{index + 1}. {item}
+@if(index == 0)
+* {item} (first)
+@else
+- {item}
+@end
 @end';
+
+echo $tsuku->process($template, ['items' => ['Apple', 'Banana', 'Cherry']]);
+// Output:
+// * Apple (first)
+// - Banana
+// - Cherry
+```
+
+For the last item, number the list from 1 (as above) and compare with `@length()`:
+
+```php
+$template = '@for(items as item, number)
+{item}@?{number == @length(items) "." : ","}
+@end';
+
+$data = ['items' => [1 => 'Apple', 2 => 'Banana', 3 => 'Cherry']];
+
+echo $tsuku->process($template, $data);
+// Output:
+// Apple,
+// Banana,
+// Cherry.
 ```
 
 ### Comma-Separated List
@@ -265,6 +428,39 @@ $template = '@join(items, ", ")';
 $template = '@for(items as item, index)@if(index > 0), @end{item}@end';
 ```
 
+The manual version puts the separator **in front of** every item except the first (`index > 0`), so it never needs to know which item is last.
+
+::: warning Lists only
+`index > 0` relies on the keys `0, 1, 2, ...`. With string keys it is true for the first item too (`"sku-1" > 0` is true in PHP 8), so pass `array_values($items)` - or use `@join()`.
+:::
+
+### Separators Between JSON Objects
+
+The same leading-separator idea builds valid JSON arrays - the comma is printed before every object except the first:
+
+```php
+$template = '{
+  "items": [@for(items as item, index)@if(index > 0),@end
+    {"name": @json(item)}@end
+  ]
+}';
+
+echo $tsuku->process($template, ['items' => ['Apple', 'Banana', 'Cherry']]);
+```
+
+**Output:**
+```json
+{
+  "items": [
+    {"name": "Apple"},
+    {"name": "Banana"},
+    {"name": "Cherry"}
+  ]
+}
+```
+
+`@json()` returns the complete quoted JSON string, so it is not wrapped in quotes. See [JSON APIs](/examples/json-apis) for larger examples.
+
 ### Table Rows
 
 ```php
@@ -272,10 +468,33 @@ $template = '<table>
 @for(products as product)
 <tr>
   <td>{product.name}</td>
-  <td>${product.price}</td>
+  <td>$@number(product.price, 2)</td>
 </tr>
 @end
 </table>';
+
+$data = [
+    'products' => [
+        ['name' => 'Widget', 'price' => 29.99],
+        ['name' => 'Gadget', 'price' => 1299.5],
+    ],
+];
+
+echo $tsuku->process($template, $data);
+```
+
+**Output:**
+```html
+<table>
+<tr>
+  <td>Widget</td>
+  <td>$29.99</td>
+</tr>
+<tr>
+  <td>Gadget</td>
+  <td>$1,299.50</td>
+</tr>
+</table>
 ```
 
 ## Next Steps

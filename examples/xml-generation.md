@@ -18,10 +18,12 @@ $template = '<?xml version="1.0" encoding="UTF-8"?>
         <sku>@xml(product.sku)</sku>
         <name>@xml(product.name)</name>
         <description>@xml(product.description)</description>
-        <price currency="USD">@number(product.price, 2)</price>
+        <price currency="USD">@number(product.price, 2, ".", "")</price>
         <stock>@match(product.stock)
-            @case(0)out_of_stock
-            @default in_stock
+            @case(0)
+                out_of_stock
+            @default
+                in_stock
         @end</stock>
     </product>
 @end
@@ -72,6 +74,11 @@ echo $tsuku->process($template, $data);
 </products>
 ```
 
+Notes:
+- `@xml()` escapes `&`, `<`, `>`, `"` and `'`; a plain `{variable}` is printed unescaped.
+- Content comes before `@match` on its line (`<stock>`) and after its `@end` (`</stock>`), so the block is *inline*: the line breaks and indentation around each case body are dropped and the value renders as `<stock>in_stock</stock>`. Lines that hold only directives print nothing. See [Whitespace Control](/guide/whitespace-control).
+- `@number(value, 2)` adds a comma as thousands separator (`1,299.50`); feeds usually need `@number(value, 2, ".", "")`.
+
 ## Google Shopping Feed
 
 ### Complete Shopping Feed
@@ -90,11 +97,8 @@ $template = '<?xml version="1.0" encoding="UTF-8"?>
             <g:description>@xml(product.description)</g:description>
             <g:link>@xml(product.url)</g:link>
             <g:image_link>@xml(product.image)</g:image_link>
-            <g:price>@number(product.price, 2) USD</g:price>
-            <g:availability>@match(product.stock)
-                @case(0)out of stock
-                @default in stock
-            @end</g:availability>
+            <g:price>@number(product.price, 2, ".", "") USD</g:price>
+            <g:availability>@?{product.stock > 0 "in_stock" : "out_of_stock"}</g:availability>
             <g:condition>new</g:condition>
             <g:brand>@xml(product.brand)</g:brand>
             <g:gtin>{product.gtin}</g:gtin>
@@ -127,6 +131,32 @@ $data = [
 echo $tsuku->process($template, $data);
 ```
 
+**Output:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+    <channel>
+        <title>My Store</title>
+        <link>https://example.com</link>
+        <description>Quality products &amp; great service</description>
+        <item>
+            <g:id>WID001</g:id>
+            <g:title>Premium Widget</g:title>
+            <g:description>High-quality widget</g:description>
+            <g:link>https://example.com/widget</g:link>
+            <g:image_link>https://example.com/images/widget.jpg</g:image_link>
+            <g:price>29.99 USD</g:price>
+            <g:availability>in_stock</g:availability>
+            <g:condition>new</g:condition>
+            <g:brand>WidgetCo</g:brand>
+            <g:gtin>0123456789012</g:gtin>
+        </item>
+    </channel>
+</rss>
+```
+
+`@?{condition "value if true" : "value if false"}` picks one of two values inline - handy for single values such as the availability.
+
 ## Sitemap Generation
 
 ### XML Sitemap
@@ -148,19 +178,19 @@ $data = [
     'pages' => [
         [
             'url' => 'https://example.com/',
-            'updated_at' => time(),
+            'updated_at' => strtotime('2024-01-15'),
             'changefreq' => 'daily',
             'priority' => 1.0
         ],
         [
             'url' => 'https://example.com/products',
-            'updated_at' => strtotime('-1 day'),
+            'updated_at' => strtotime('2024-01-14'),
             'changefreq' => 'weekly',
             'priority' => 0.8
         ],
         [
             'url' => 'https://example.com/about',
-            'updated_at' => strtotime('-30 days'),
+            'updated_at' => strtotime('2023-12-16'),
             'changefreq' => 'monthly',
             'priority' => 0.5
         ],
@@ -207,7 +237,7 @@ $template = '<?xml version="1.0" encoding="UTF-8"?>
         <link>@xml(blog.url)</link>
         <description>@xml(blog.description)</description>
         <language>en-us</language>
-        <lastBuildDate>@date("r")</lastBuildDate>
+        <lastBuildDate>@date("r", blog.built_at)</lastBuildDate>
 @for(posts as post)
         <item>
             <title>@xml(post.title)</title>
@@ -228,7 +258,8 @@ $data = [
     'blog' => [
         'title' => 'Tech Blog',
         'url' => 'https://blog.example.com',
-        'description' => 'Latest tech news & tutorials'
+        'description' => 'Latest tech news & tutorials',
+        'built_at' => strtotime('2024-01-16 08:00:00'), // in production: time()
     ],
     'posts' => [
         [
@@ -244,6 +275,32 @@ $data = [
 
 echo $tsuku->process($template, $data);
 ```
+
+**Output (default timezone UTC):**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Tech Blog</title>
+        <link>https://blog.example.com</link>
+        <description>Latest tech news &amp; tutorials</description>
+        <language>en-us</language>
+        <lastBuildDate>Tue, 16 Jan 2024 08:00:00 +0000</lastBuildDate>
+        <item>
+            <title>Getting Started with PHP 8.1</title>
+            <link>https://blog.example.com/php-8-1</link>
+            <description>Learn about new features in PHP 8.1</description>
+            <pubDate>Mon, 15 Jan 2024 00:00:00 +0000</pubDate>
+            <guid>https://blog.example.com/php-8-1</guid>
+            <author>john@example.com (John Doe)</author>
+            <category>PHP</category>
+            <category>Tutorial</category>
+        </item>
+    </channel>
+</rss>
+```
+
+The e-mail address comes from the data, so it needs no escaping in the template. An `@` typed into the template text itself must be written `@@` - see [Escapes & Special Characters](/guide/escaping).
 
 ## SOAP Response
 
@@ -265,11 +322,11 @@ $template = '<?xml version="1.0" encoding="UTF-8"?>
                 <item>
                     <sku>@xml(item.sku)</sku>
                     <quantity>{item.qty}</quantity>
-                    <price>@number(item.price, 2)</price>
+                    <price>@number(item.price, 2, ".", "")</price>
                 </item>
 @end
             </items>
-            <total>@number(order.total, 2)</total>
+            <total>@number(order.total, 2, ".", "")</total>
         </OrderResponse>
     </soap:Body>
 </soap:Envelope>';
@@ -292,6 +349,38 @@ $data = [
 
 echo $tsuku->process($template, $data);
 ```
+
+**Output:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <soap:Body>
+        <OrderResponse xmlns="http://example.com/orders">
+            <orderId>12345</orderId>
+            <status>confirmed</status>
+            <customer>
+                <name>John Doe</name>
+                <email>john@example.com</email>
+            </customer>
+            <items>
+                <item>
+                    <sku>WID-001</sku>
+                    <quantity>2</quantity>
+                    <price>29.99</price>
+                </item>
+                <item>
+                    <sku>GAD-002</sku>
+                    <quantity>1</quantity>
+                    <price>49.99</price>
+                </item>
+            </items>
+            <total>109.97</total>
+        </OrderResponse>
+    </soap:Body>
+</soap:Envelope>
+```
+
+The order total is part of the data: templates have no arithmetic, so totals are calculated in PHP.
 
 ## Configuration Files
 
@@ -327,39 +416,71 @@ $data = [
 echo $tsuku->process($template, $data);
 ```
 
+**Output:**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans">
+    <bean id="mainDataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+        <property name="url" value="jdbc:mysql://localhost:3306/mydb" />
+        <property name="username" value="root" />
+        <property name="password" value="secret123" />
+        <property name="maxActive" value="20" />
+    </bean>
+</beans>
+```
+
+`@xml()` also escapes `"`, so it is safe inside attribute values.
+
 ## SVG Generation
 
 ### Dynamic SVG Chart
 
+Templates have no arithmetic: `{index * 50}` is printed as plain text, and a function argument such as `index * 50 + 10` is looked up as a variable name, so `@number(index * 50 + 10, 0)` prints `0`. Calculate the chart geometry in PHP instead and let the template place the values:
+
 ```php
 $template = '<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
     <rect width="400" height="200" fill="#f0f0f0"/>
-@for(bars as bar, index)
-    <rect
-        x="@number(index * 50 + 10, 0, "", "")"
-        y="@number(200 - bar.value * 2, 0, "", "")"
-        width="40"
-        height="@number(bar.value * 2, 0, "", "")"
-        fill="#4CAF50"/>
-    <text
-        x="@number(index * 50 + 30, 0, "", "")"
-        y="@number(200 - bar.value * 2 - 5, 0, "", "")"
-        text-anchor="middle"
-        font-size="12">@xml(bar.label)</text>
+@for(bars as bar)
+    <rect x="{bar.x}" y="{bar.y}" width="40" height="{bar.height}" fill="#4CAF50"/>
+    <text x="{bar.label_x}" y="{bar.label_y}" text-anchor="middle" font-size="12">@xml(bar.label)</text>
 @end
 </svg>';
 
-$data = [
-    'bars' => [
-        ['label' => 'Jan', 'value' => 45],
-        ['label' => 'Feb', 'value' => 65],
-        ['label' => 'Mar', 'value' => 55],
-        ['label' => 'Apr', 'value' => 80],
-    ]
-];
+$values = ['Jan' => 45, 'Feb' => 65, 'Mar' => 55, 'Apr' => 80];
 
-echo $tsuku->process($template, $data);
+$bars = [];
+foreach (array_keys($values) as $index => $label) {
+    $height = $values[$label] * 2;
+    $bars[] = [
+        'label' => $label,
+        'x' => $index * 50 + 10,
+        'y' => 200 - $height,
+        'height' => $height,
+        'label_x' => $index * 50 + 30,
+        'label_y' => 200 - $height - 5,
+    ];
+}
+
+echo $tsuku->process($template, ['bars' => $bars]);
 ```
+
+**Output:**
+```xml
+<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#f0f0f0"/>
+    <rect x="10" y="110" width="40" height="90" fill="#4CAF50"/>
+    <text x="30" y="105" text-anchor="middle" font-size="12">Jan</text>
+    <rect x="60" y="70" width="40" height="130" fill="#4CAF50"/>
+    <text x="80" y="65" text-anchor="middle" font-size="12">Feb</text>
+    <rect x="110" y="90" width="40" height="110" fill="#4CAF50"/>
+    <text x="130" y="85" text-anchor="middle" font-size="12">Mar</text>
+    <rect x="160" y="40" width="40" height="160" fill="#4CAF50"/>
+    <text x="180" y="35" text-anchor="middle" font-size="12">Apr</text>
+</svg>
+```
+
+If you prefer to keep such calculations next to the template, register a small function, for example `$tsuku->registerFunction('times', fn($a, $b) => $a * $b);` and write `@times(bar.value, 2)`.
 
 ## Magento 2 Product Feed
 
@@ -409,7 +530,7 @@ class ProductXmlFeedGenerator
         <sku>@xml(product.sku)</sku>
         <name>@xml(product.name)</name>
         <description>@xml(product.description)</description>
-        <price>@number(product.price, 2)</price>
+        <price>@number(product.price, 2, ".", "")</price>
         <url>@xml(product.url)</url>
         <image>@xml(product.image)</image>
         <stock>@number(product.stock, 0, "", "")</stock>
@@ -427,18 +548,82 @@ class ProductXmlFeedGenerator
 ### Always Escape Text Content
 
 ```php
-// ✅ Good - Escaped
-$template = '<name>@xml(product.name)</name>';
+$data = ['product' => ['name' => 'Fish & Chips <Large>']];
 
-// ❌ Bad - Not escaped (XSS risk)
-$template = '<name>{product.name}</name>';
+// ✅ Good - Escaped
+echo $tsuku->process('<name>@xml(product.name)</name>', $data);
+// Output: <name>Fish &amp; Chips &lt;Large&gt;</name>
+
+// ❌ Bad - Not escaped: invalid XML, and markup in the data ends up in the document
+echo $tsuku->process('<name>{product.name}</name>', $data);
+// Output: <name>Fish & Chips <Large></name>
 ```
 
 ### Use CDATA for Large Text Blocks
 
+Text inside a CDATA section is not entity-decoded, so do not run it through `@xml()` - the reader would see `&amp;` literally. Instead, register a block directive that wraps its content in CDATA and splits any `]]>` in the data:
+
 ```php
-$template = '<description><![CDATA[@xml(product.description)]]></description>';
+$tsuku->registerDirective('cdata', fn(string $body): string =>
+    '<![CDATA[' . str_replace(']]>', ']]]]><![CDATA[>', $body) . ']]>');
+
+echo $tsuku->process(
+    '<description>@cdata{product.description}@end</description>',
+    ['product' => ['description' => 'Fish & Chips <b>fresh</b>']]
+);
+// Output: <description><![CDATA[Fish & Chips <b>fresh</b>]]></description>
 ```
+
+See [Custom Directives](/guide/custom-directives) for how block directives work.
+
+### Stream Large Feeds
+
+`process()` builds the whole document in memory. For feeds with tens of thousands of products, `processToStream()` renders the part before the `@for` once, then one row at a time, then the rest, and hands each piece to a callback - so memory use does not grow with the number of products:
+
+```php
+$template = '<?xml version="1.0" encoding="UTF-8"?>
+<products>
+@for(products as product)
+    <product id="{product.id}">
+        <name>@xml(product.name)</name>
+        <price>@number(product.price, 2, ".", "")</price>
+    </product>
+@end
+</products>';
+
+// Any iterable works; a generator can page through the database one row at a time
+$rows = (function (): \Generator {
+    yield ['id' => 1, 'name' => 'Fish & Chips', 'price' => 8.5];
+    yield ['id' => 2, 'name' => 'Widget', 'price' => 1299.5];
+})();
+
+$handle = fopen('feed.xml', 'wb');
+$tsuku->processToStream(
+    $template,
+    [],          // data shared by the header, every row and the footer
+    $rows,       // the rows of the streamed @for, consumed once
+    'products',  // the name of the @for collection that is streamed
+    fn(string $chunk) => fwrite($handle, $chunk)
+);
+fclose($handle);
+```
+
+**Output (feed.xml):**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<products>
+    <product id="1">
+        <name>Fish &amp; Chips</name>
+        <price>8.50</price>
+    </product>
+    <product id="2">
+        <name>Widget</name>
+        <price>1299.50</price>
+    </product>
+</products>
+```
+
+The template must contain exactly one top-level `@for` over the streamed collection. See [Streaming Large Datasets](/guide/streaming).
 
 ### Validate XML Structure
 
@@ -454,17 +639,19 @@ if (!$doc->loadXML($xml)) {
 
 ### Add Proper Namespaces
 
-```php
-$template = '<?xml version="1.0" encoding="UTF-8"?>
+Declare every namespace prefix you use (`g:`, `c:`, ...) on the root element of the template:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
      xmlns:g="http://base.google.com/ns/1.0"
      xmlns:c="http://base.google.com/cns/1.0">
     <!-- content -->
-</rss>';
+</rss>
 ```
 
 ## Next Steps
 
 - [JSON APIs →](/examples/json-apis) - Learn JSON output
-- [Security →](/guide/security) - XML injection prevention
+- [Security →](/guide/security) - Escaping for every output format
 - [Built-in Functions →](/guide/built-in-functions) - XML escaping

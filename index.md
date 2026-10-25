@@ -23,15 +23,15 @@ features:
 
   - icon: 🔄
     title: Powerful Control Flow
-    details: Loops, conditionals, pattern matching - everything you need for complex data transformations
+    details: Loops, @if / @elseif / @else, pattern matching and real conditions with and, or, not and in
 
   - icon: 🎨
     title: Smart Object Access
     details: Automatic getter detection, method calls, and property access for both arrays and objects
 
   - icon: 🔧
-    title: Custom Functions
-    details: Register your own functions to extend template capabilities with domain-specific logic
+    title: Custom Functions & Directives
+    details: Register your own @functions() and @block() ... @end directives for domain-specific logic
 
   - icon: 🛡️
     title: Security Built-in
@@ -39,7 +39,7 @@ features:
 
   - icon: ⚡
     title: Production-Ready
-    details: 196 tests, 423 assertions, 88% mutation score - battle-tested and reliable
+    details: 848 tests, 99.4% line coverage, 98.7% mutation score - battle-tested and reliable
 
   - icon: 🏗️
     title: Clean Architecture
@@ -61,7 +61,7 @@ $tsuku = new Tsuku();
 
 $template = 'SKU,Name,Price,Stock
 @for(products as product)
-@csv(product.sku),@csv(product.name),$@number(product.price, 2),{product.stock}
+@csv(product.sku),@csv(product.name),@number(product.price, 2, ".", ""),{product.stock}
 @end';
 
 $data = [
@@ -77,9 +77,23 @@ echo $tsuku->process($template, $data);
 **Output:**
 ```csv
 SKU,Name,Price,Stock
-WID-001,Widget,$29.99,100
-GAD-002,"Gadget, Premium",$1,299.50,50
+WID-001,Widget,29.99,100
+GAD-002,"Gadget, Premium",1299.50,50
 ```
+
+`@csv()` quotes the name that contains a comma, and `@number(price, 2, ".", "")` keeps the thousands separator out of the price column.
+
+## What's New in Tsuku 1.4.0
+
+- **Real conditions** - `and` / `&&`, `or` / `||`, `not` / `!`, parentheses and `in` / `not in` in `@if`, `@unless`, `@elseif` and `@?{...}` ([Conditionals](/guide/conditionals))
+- **`@elseif`** branches with a single `@end`
+- **Whitespace control** - lines that hold only directives vanish, so templates can be indented freely ([Whitespace Control](/guide/whitespace-control))
+- **Custom block directives** - `registerDirective()` now works: `@cdata ... @end`, `@wrap("[", "]") ... @end` ([Custom Directives](/guide/custom-directives))
+- **`@@`** prints a literal `@` - `user@@example.com`, `@@media (...)` ([Escapes & Special Characters](/guide/escaping))
+- **Clear errors** - malformed conditions throw a `ParseException` with line and column instead of rendering something wrong
+- Since 1.3.0: **streaming** with `processToStream()` for feeds with hundreds of thousands of rows ([Streaming](/guide/streaming))
+
+1.4.0 changes some output compared to 1.3.0 (mostly whitespace around directives) - read [Upgrading from 1.3](/guide/upgrading) before you update, and the [Changelog](/changelog) for everything else.
 
 ## Why Tsuku?
 
@@ -90,15 +104,15 @@ Tsuku excels at transforming structured data into various text formats - CSV exp
 ### Modern PHP Architecture
 
 Built with a clean three-stage compiler pipeline:
-- **Lexer**: Breaks templates into tokens
-- **Parser**: Builds an Abstract Syntax Tree (AST)
-- **Compiler**: Generates optimized output
+- **Lexer**: Breaks templates into tokens (and decides which whitespace around directives is layout)
+- **Parser**: Builds an Abstract Syntax Tree (AST), conditions included
+- **Compiler**: Walks the tree and generates the output
 
 The same architecture used by programming languages like PHP itself, JavaScript, and Python.
 
 ### Battle-Tested Quality
 
-With 88% mutation score, Tsuku is more thoroughly tested than most production code. Every feature is validated with comprehensive tests to ensure reliability.
+Tsuku 1.4.0 ships with 848 tests, 99.4% line coverage and a 98.7% mutation score. Characterization tests pin the 1.3.0 behaviour that 1.4.0 keeps.
 
 ## Installation
 

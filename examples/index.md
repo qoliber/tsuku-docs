@@ -12,10 +12,10 @@ Tsuku excels at transforming structured data (arrays, objects) into any text-bas
 
 Learn how to generate CSV files from your data:
 - Product catalogs with proper escaping
-- Order exports with calculations
+- Order exports with line totals
 - Customer lists
 - Inventory reports with conditionals
-- Sales reports with formulas
+- Sales reports with totals
 - **[See complete examples in examples/07-csv-export.php](https://github.com/qoliber/tsuku/blob/main/examples/07-csv-export.php)**
 
 ### [XML Generation →](/examples/xml-generation)
@@ -56,7 +56,6 @@ Build JSON responses for APIs:
 - JSON-LD structured data
 - Webhook payloads
 - Error responses
-- **[See complete examples in examples/11-json-generation.php](https://github.com/qoliber/tsuku/blob/main/examples/11-json-generation.php)**
 
 ### [E-commerce →](/examples/ecommerce)
 
@@ -108,8 +107,10 @@ $template = '<?xml version="1.0" encoding="UTF-8"?>
         <name>@xml(product.name)</name>
         <price>@number(product.price, 2)</price>
         <stock>@match(product.stock)
-            @case(0)out_of_stock
-            @default in_stock
+            @case(0)
+                out_of_stock
+            @default
+                in_stock
         @end</stock>
     </product>
 @end
@@ -142,6 +143,8 @@ echo $tsuku->process($template, $data);
 </products>
 ```
 
+Content comes before `@match` on its line (`<stock>`) and after its `@end` (`</stock>`), so the block is *inline*: the line breaks and indentation around each case body are dropped and the value renders as `<stock>in_stock</stock>`. Lines holding only directives (`@for`, `@case`, `@end`, ...) print nothing. See [Whitespace Control](/guide/whitespace-control).
+
 ### JSON API Response
 
 ```php
@@ -173,26 +176,47 @@ echo $tsuku->process($template, $data);
     "success": true,
     "data": {
         "id": 123,
-        "name": "John \"The Developer\" Doe",
+        "name": "John \u0022The Developer\u0022 Doe",
         "email": "john@example.com",
         "role": "admin"
     }
 }
 ```
 
+`@json()` prints a complete JSON string, quotes included, so it is not wrapped in `"..."` in the template. Quotes, `<`, `>`, `&` and `'` inside the value are written as `\u0022`, `\u003C`, `\u003E`, `\u0026` and `\u0027` - valid JSON that decodes to the original text and is safe to embed in HTML.
+
 ## Common Patterns
 
 ### Conditional Output
 
+Directive lines can be indented like the content around them; they print nothing, not even their indentation:
+
 ```php
 $template = '@for(orders as order)
 Order #{order.id}
-@if(order.shipped)
-Tracking: {order.tracking_number}
-@else
-Status: Processing
-@end
+    @if(order.shipped)
+    Tracking: {order.tracking_number}
+    @else
+    Status: Processing
+    @end
 @end';
+
+$data = [
+    'orders' => [
+        ['id' => 1001, 'shipped' => true, 'tracking_number' => '1Z999AA10123456784'],
+        ['id' => 1002, 'shipped' => false],
+    ]
+];
+
+echo $tsuku->process($template, $data);
+```
+
+**Output:**
+```text
+Order #1001
+    Tracking: 1Z999AA10123456784
+Order #1002
+    Status: Processing
 ```
 
 ### Nested Data
@@ -205,21 +229,47 @@ Category: {category.name}
 @end
 
 @end';
+
+$data = [
+    'categories' => [
+        ['name' => 'Books', 'products' => [
+            ['name' => 'PHP Basics', 'price' => '29.99'],
+            ['name' => 'Clean Code', 'price' => '39.99'],
+        ]],
+        ['name' => 'Music', 'products' => [
+            ['name' => 'Jazz Classics', 'price' => '14.99'],
+        ]],
+    ]
+];
+
+echo $tsuku->process($template, $data);
+```
+
+**Output:**
+```text
+Category: Books
+  - PHP Basics: $29.99
+  - Clean Code: $39.99
+
+Category: Music
+  - Jazz Classics: $14.99
+
 ```
 
 ### Custom Formatting
 
 ```php
-$tsuku->registerFunction('currency', function(float $amount, string $code = 'USD'): string {
-    return match($code) {
-        'USD' => ' . number_format($amount, 2),
+$tsuku->registerFunction('currency', function (float $amount, string $code = 'USD'): string {
+    return match ($code) {
+        'USD' => '$' . number_format($amount, 2),
         'EUR' => '€' . number_format($amount, 2),
         'GBP' => '£' . number_format($amount, 2),
         default => $code . ' ' . number_format($amount, 2),
     };
 });
 
-$template = 'Total: @currency(total, "EUR")';
+echo $tsuku->process('Total: @currency(total, "EUR")', ['total' => 1234.5]);
+// Output: Total: €1,234.50
 ```
 
 ## Integration Examples
@@ -252,7 +302,7 @@ class ProductExportController
 
         $template = 'SKU,Name,Price
 @for(products as product)
-@csv(product.sku),@csv(product.name),@number(product.price, 2)
+@csv(product.sku),@csv(product.name),@number(product.price, 2, ".", "")
 @end';
 
         $csv = $this->tsuku->process($template, ['products' => $products]);
@@ -280,7 +330,7 @@ class OrderExportService
 @for(orders as order)
     <order id="{order.id}">
         <customer>@xml(order.customer_name)</customer>
-        <total>@number(order.total, 2)</total>
+        <total>@number(order.total, 2, ".", "")</total>
         <status>{order.status}</status>
     </order>
 @end

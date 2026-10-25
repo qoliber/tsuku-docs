@@ -25,11 +25,16 @@ This will:
 If you prefer not to use Composer, you can install manually:
 
 1. Download the latest release from GitHub
-2. Extract to your project
-3. Require the autoloader:
+2. Extract it into your project
+3. Register an autoloader for the `Qoliber\Tsuku\` namespace (a release archive contains `src/`, not a `vendor/` directory):
 
 ```php
-require_once '/path/to/tsuku/vendor/autoload.php';
+spl_autoload_register(function (string $class): void {
+    $prefix = 'Qoliber\\Tsuku\\';
+    if (str_starts_with($class, $prefix)) {
+        require '/path/to/tsuku/src/' . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+    }
+});
 ```
 
 ::: warning
@@ -58,10 +63,16 @@ If you see "Hello, World!" - you're all set! 🎉
 
 ## Version Information
 
-Check your installed version:
+This documentation describes **Tsuku 1.4.0**. Check your installed version:
 
 ```bash
 composer show qoliber/tsuku
+```
+
+To require 1.4 or later explicitly:
+
+```bash
+composer require qoliber/tsuku:^1.4
 ```
 
 ## Updating
@@ -71,6 +82,10 @@ Update to the latest version:
 ```bash
 composer update qoliber/tsuku
 ```
+
+::: tip Coming from 1.3?
+1.4.0 changes the whitespace around directives and throws on malformed conditions that 1.3.0 evaluated silently. Read [Upgrading from 1.3](/guide/upgrading) before updating, and see the [Changelog](/changelog).
+:::
 
 ## Development Installation
 
@@ -90,8 +105,14 @@ composer test
 # Run mutation tests
 composer test:mutation
 
+# Run static analysis
+composer analyse
+
 # Check code style
 composer cs:check
+
+# Run the benchmarks
+php benchmarks/run-all.php
 ```
 
 ## PHP Version Compatibility

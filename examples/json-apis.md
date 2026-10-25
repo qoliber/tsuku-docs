@@ -18,10 +18,7 @@ $template = '{
         "name": @json(user.name),
         "email": @json(user.email),
         "role": @json(user.role),
-        "active": @match(user.active)
-            @case(1, true)true
-            @default false
-        @end
+        "active": @?{user.active "true" : "false"}
     }
 }';
 
@@ -45,13 +42,17 @@ echo $tsuku->process($template, $data);
     "success": true,
     "data": {
         "id": 123,
-        "name": "John \"The Developer\" Doe",
+        "name": "John \u0022The Developer\u0022 Doe",
         "email": "john@example.com",
         "role": "admin",
         "active": true
     }
 }
 ```
+
+`@json()` returns a complete, quoted JSON string, so it is never wrapped in quotes in the template. It escapes `"`, `'`, `&`, `<` and `>` as `\u0022`, `\u0027`, `\u0026`, `\u003C` and `\u003E` (and `/` as `\/`) - valid JSON that any decoder turns back into the original text, and safe to embed in HTML.
+
+Booleans come out of an inline condition: `@?{user.active "true" : "false"}`. There are no `true`/`false` literals in Tsuku - a bare `true` in a template is looked up as a variable - so `@case(true)` or `@if(user.active == true)` do not do what they look like (see [Conditionals](/guide/conditionals)).
 
 ## Array Responses
 
@@ -61,20 +62,15 @@ echo $tsuku->process($template, $data);
 $template = '{
     "success": true,
     "total": @length(products),
-    "data": [
-@for(products as product, index)
+    "data": [@for(products as product, index)@if(index > 0),@end
         {
             "id": {product.id},
             "sku": @json(product.sku),
             "name": @json(product.name),
             "price": @number(product.price, 2, ".", ""),
             "stock": {product.stock},
-            "available": @match(product.stock)
-                @case(0)false
-                @default true
-            @end
-        }@if(index < length(products) - 1),@end
-@end
+            "available": @?{product.stock > 0 "true" : "false"}
+        }@end
     ]
 }';
 
@@ -124,6 +120,26 @@ echo $tsuku->process($template, $data);
 }
 ```
 
+### Commas Between Array Items
+
+JSON does not allow a comma after the last element, and Tsuku has no `loop.last`. Put the separator *in front of* every element except the first instead - the loop index (the array key) is `0` only for the first one:
+
+```
+"data": [@for(products as product, index)@if(index > 0),@end
+    {
+        ...
+    }@end
+]
+```
+
+Each iteration renders `,` (from the second element on), a line break and the element. Writing `@for` and `@if(index > 0),@end` at the end of the `[` line and `@end` right after the element's closing `}` keeps one element per line with the comma after the previous `}`; an empty list renders `[` and `]` on two lines. Nested arrays use the same idiom with their own index variable (see the GraphQL example below).
+
+The index is the array key, so the first element must have the key `0`. Pass `array_values($items)` when the keys are strings or do not start at `0`.
+
+::: warning Arithmetic is not supported
+Earlier versions of this page showed `@if(index < length(items) - 1),@end`. That never emitted a comma, and since 1.4.0 it throws a `ParseException` (`Unexpected '-'`): conditions have no arithmetic. Use the leading separator above.
+:::
+
 ## Nested Objects
 
 ### Order Details API
@@ -139,17 +155,15 @@ $template = '{
             "name": @json(order.customer.name),
             "email": @json(order.customer.email)
         },
-        "items": [
-@for(order.items as item, index)
+        "items": [@for(order.items as item, index)@if(index > 0),@end
             {
                 "id": {item.id},
                 "name": @json(item.name),
                 "sku": @json(item.sku),
                 "quantity": {item.qty},
                 "price": @number(item.price, 2, ".", ""),
-                "total": @number(item.qty * item.price, 2, ".", "")
-            }@if(index < length(order.items) - 1),@end
-@end
+                "total": @number(item.line_total, 2, ".", "")
+            }@end
         ],
         "totals": {
             "subtotal": @number(order.subtotal, 2, ".", ""),
@@ -164,15 +178,15 @@ $data = [
     'order' => [
         'id' => 'ORD-12345',
         'status' => 'processing',
-        'created_at' => time(),
+        'created_at' => 1705312800, // 2024-01-15 10:00:00 UTC
         'customer' => [
             'id' => 456,
             'name' => 'Jane Smith',
             'email' => 'jane@example.com'
         ],
         'items' => [
-            ['id' => 1, 'name' => 'Widget', 'sku' => 'WID-001', 'qty' => 2, 'price' => 29.99],
-            ['id' => 2, 'name' => 'Gadget', 'sku' => 'GAD-002', 'qty' => 1, 'price' => 49.99],
+            ['id' => 1, 'name' => 'Widget', 'sku' => 'WID-001', 'qty' => 2, 'price' => 29.99, 'line_total' => 59.98],
+            ['id' => 2, 'name' => 'Gadget', 'sku' => 'GAD-002', 'qty' => 1, 'price' => 49.99, 'line_total' => 49.99],
         ],
         'subtotal' => 109.97,
         'tax' => 10.00,
@@ -185,33 +199,68 @@ header('Content-Type: application/json');
 echo $tsuku->process($template, $data);
 ```
 
+**Output:**
+```json
+{
+    "order": {
+        "id": "ORD-12345",
+        "status": "processing",
+        "created_at": "2024-01-15T10:00:00+00:00",
+        "customer": {
+            "id": 456,
+            "name": "Jane Smith",
+            "email": "jane@example.com"
+        },
+        "items": [
+            {
+                "id": 1,
+                "name": "Widget",
+                "sku": "WID-001",
+                "quantity": 2,
+                "price": 29.99,
+                "total": 59.98
+            },
+            {
+                "id": 2,
+                "name": "Gadget",
+                "sku": "GAD-002",
+                "quantity": 1,
+                "price": 49.99,
+                "total": 49.99
+            }
+        ],
+        "totals": {
+            "subtotal": 109.97,
+            "tax": 10.00,
+            "shipping": 5.00,
+            "total": 124.97
+        }
+    }
+}
+```
+
+`@date()` formats with PHP's default timezone (UTC in this output).
+
+::: tip Compute totals in PHP
+Templates have no arithmetic - `@number(item.qty * item.price, 2)` is not a multiplication. Put derived values such as `line_total` into the data before rendering (or register a [custom function](/guide/custom-functions) for it).
+:::
+
 ## Pagination
 
 ### Paginated Response
 
 ```php
 $template = '{
-    "data": [
-@for(items as item, index)
-        {
-            "id": {item.id},
-            "name": @json(item.name)
-        }@if(index < length(items) - 1),@end
-@end
+    "data": [@for(items as item, index)@if(index > 0),@end
+        {"id": {item.id}, "name": @json(item.name)}@end
     ],
     "pagination": {
         "current_page": {page.current},
         "per_page": {page.per_page},
         "total": {page.total},
         "total_pages": {page.total_pages},
-        "has_next": @match(page.current < page.total_pages)
-            @case(1, true)true
-            @default false
-        @end,
-        "has_prev": @match(page.current > 1)
-            @case(1, true)true
-            @default false
-        @end
+        "has_next": @?{page.current < page.total_pages "true" : "false"},
+        "has_prev": @?{page.current > 1 "true" : "false"}
     }
 }';
 
@@ -252,6 +301,8 @@ echo $tsuku->process($template, $data);
 }
 ```
 
+`@?{condition "a" : "b"}` takes a full condition. `@match()` does not: it compares a *value* with its `@case` values, so `@match(page.current < page.total_pages)` looks up a variable literally named `page.current < page.total_pages` (always missing) instead of comparing.
+
 ## Error Responses
 
 ### Error Handling
@@ -262,13 +313,11 @@ $template = '{
     "error": {
         "code": @json(error.code),
         "message": @json(error.message),
-        "details": [
-@for(error.details as detail, index)
+        "details": [@for(error.details as detail, index)@if(index > 0),@end
             {
                 "field": @json(detail.field),
                 "message": @json(detail.message)
-            }@if(index < length(error.details) - 1),@end
-@end
+            }@end
         ]
     }
 }';
@@ -289,6 +338,27 @@ http_response_code(400);
 echo $tsuku->process($template, $data);
 ```
 
+**Output:**
+```json
+{
+    "success": false,
+    "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid input data",
+        "details": [
+            {
+                "field": "email",
+                "message": "Invalid email format"
+            },
+            {
+                "field": "password",
+                "message": "Password too short"
+            }
+        ]
+    }
+}
+```
+
 ## GraphQL Response
 
 ### GraphQL Query Result
@@ -296,27 +366,23 @@ echo $tsuku->process($template, $data);
 ```php
 $template = '{
     "data": {
-        "user": @if(user){
+        "user":@if(user) {
             "id": {user.id},
             "name": @json(user.name),
             "email": @json(user.email),
-            "posts": [
-@for(user.posts as post, index)
+            "posts": [@for(user.posts as post, index)@if(index > 0),@end
                 {
                     "id": {post.id},
                     "title": @json(post.title),
                     "excerpt": @json(post.excerpt),
-                    "comments": [
-@for(post.comments as comment, cIndex)
+                    "comments": [@for(post.comments as comment, cIndex)@if(cIndex > 0),@end
                         {
                             "id": {comment.id},
                             "author": @json(comment.author),
                             "text": @json(comment.text)
-                        }@if(cIndex < length(post.comments) - 1),@end
-@end
+                        }@end
                     ]
-                }@if(index < length(user.posts) - 1),@end
-@end
+                }@end
             ]
         }@else null@end
     }
@@ -334,7 +400,14 @@ $data = [
                 'excerpt' => 'This is my first post',
                 'comments' => [
                     ['id' => 1, 'author' => 'Jane', 'text' => 'Great post!'],
+                    ['id' => 2, 'author' => 'Sam', 'text' => 'Thanks for sharing'],
                 ]
+            ],
+            [
+                'id' => 2,
+                'title' => 'Second Post',
+                'excerpt' => 'More thoughts',
+                'comments' => []
             ],
         ]
     ]
@@ -343,6 +416,47 @@ $data = [
 header('Content-Type: application/json');
 echo $tsuku->process($template, $data);
 ```
+
+**Output:**
+```json
+{
+    "data": {
+        "user": {
+            "id": 123,
+            "name": "John Doe",
+            "email": "john@example.com",
+            "posts": [
+                {
+                    "id": 1,
+                    "title": "First Post",
+                    "excerpt": "This is my first post",
+                    "comments": [
+                        {
+                            "id": 1,
+                            "author": "Jane",
+                            "text": "Great post!"
+                        },
+                        {
+                            "id": 2,
+                            "author": "Sam",
+                            "text": "Thanks for sharing"
+                        }
+                    ]
+                },
+                {
+                    "id": 2,
+                    "title": "Second Post",
+                    "excerpt": "More thoughts",
+                    "comments": [
+                    ]
+                }
+            ]
+        }
+    }
+}
+```
+
+The space after `"user":` lives inside both branches (`@if(user) {` and `@else null`), so a missing user renders `"user": null`.
 
 ## Configuration Export
 
@@ -354,10 +468,7 @@ $template = '{
         "name": @json(config.app_name),
         "version": @json(config.version),
         "environment": @json(config.env),
-        "debug": @match(config.debug)
-            @case(1, true)true
-            @default false
-        @end
+        "debug": @?{config.debug "true" : "false"}
     },
     "database": {
         "host": @json(config.db.host),
@@ -365,13 +476,8 @@ $template = '{
         "name": @json(config.db.name),
         "charset": @json(config.db.charset)
     },
-    "features": {
-@for(config.features as feature, index)
-        @json(feature.name): @match(feature.enabled)
-            @case(1, true)true
-            @default false
-        @end@if(index < length(config.features) - 1),@end
-@end
+    "features": {@for(config.features as feature, index)@if(index > 0),@end
+        @json(feature.name): @?{feature.enabled "true" : "false"}@end
     }
 }';
 
@@ -396,6 +502,29 @@ $data = [
 ];
 
 echo $tsuku->process($template, $data);
+```
+
+**Output:**
+```json
+{
+    "app": {
+        "name": "My Application",
+        "version": "1.0.0",
+        "environment": "production",
+        "debug": false
+    },
+    "database": {
+        "host": "localhost",
+        "port": 3306,
+        "name": "myapp",
+        "charset": "utf8mb4"
+    },
+    "features": {
+        "cache": true,
+        "logging": true,
+        "profiling": false
+    }
+}
 ```
 
 ## Magento 2 REST API
@@ -427,13 +556,11 @@ class ProductApiController
         "price": @number(product.price, 2, ".", ""),
         "description": @json(product.description),
         "stock": {product.stock},
-        "categories": [
-@for(product.categories as category, index)
+        "categories": [@for(product.categories as category, index)@if(index > 0),@end
             {
                 "id": {category.id},
                 "name": @json(category.name)
-            }@if(index < length(product.categories) - 1),@end
-@end
+            }@end
         ]
     }
 }';
@@ -522,34 +649,53 @@ curl_exec($ch);
 ### Always Escape String Values
 
 ```php
-// ✅ Good - Escaped
-$template = '{"name": @json(name)}';
+$data = ['name' => 'Say "hi" & <b>bye</b>'];
 
-// ❌ Bad - Not escaped (JSON injection)
-$template = '{"name": "{name}"}';
+// ✅ Good - Escaped
+echo $tsuku->process('{"name": @json(name)}', $data);
+// Output: {"name": "Say \u0022hi\u0022 \u0026 \u003Cb\u003Ebye\u003C\/b\u003E"}
+
+// ❌ Bad - Not escaped: the quote ends the JSON string (JSON injection)
+echo $tsuku->process('{"name": "{name}"}', $data);
+// Output: {"name": "Say "hi" & <b>bye</b>"}
 ```
 
 ### Use Proper Number Formatting
 
 ```php
+$data = ['price' => 1299.5];
+
 // ✅ Good - No thousands separator
-$template = '{"price": @number(price, 2, ".", "")}';
+echo $tsuku->process('{"price": @number(price, 2, ".", "")}', $data);
+// Output: {"price": 1299.50}
 
 // ❌ Bad - Has comma separator (invalid JSON)
-$template = '{"price": @number(price, 2)}';
+echo $tsuku->process('{"price": @number(price, 2)}', $data);
+// Output: {"price": 1,299.50}
 ```
 
 ### Handle Trailing Commas in Arrays
 
 ```php
-// ✅ Good - Conditional comma
-$template = '@for(items as item, index)
-{...}@if(index < length(items) - 1),@end
-@end';
+$data = ['items' => [['id' => 1], ['id' => 2], ['id' => 3]]];
 
-// ❌ Bad - Always adds comma (invalid JSON)
-$template = '@for(items as item){...},@end';
+// ✅ Good - Separator before every item except the first
+echo $tsuku->process('[@for(items as item, index)@if(index > 0),@end
+  {"id": {item.id}}@end
+]', $data);
+// Output:
+// [
+//   {"id": 1},
+//   {"id": 2},
+//   {"id": 3}
+// ]
+
+// ❌ Bad - Always adds a comma (invalid JSON)
+echo $tsuku->process('[@for(items as item){"id": {item.id}},@end]', $data);
+// Output: [{"id": 1},{"id": 2},{"id": 3},]
 ```
+
+See [Commas Between Array Items](#commas-between-array-items) for how the idiom works.
 
 ### Set Correct Content-Type Header
 

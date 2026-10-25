@@ -1,105 +1,104 @@
 # Performance & Benchmarks
 
-## ⚠️ SPOILER ALERT: IT'S SLOW - BUT NOT FOR LONG! ⚠️
+## ⚠️ SPOILER ALERT: IT'S NOT A WEB-PAGE ENGINE ⚠️
 
 ::: danger HONEST PERFORMANCE DISCLOSURE
-**Tsuku is currently ~37x slower than compiled/cached templating engines like Twig and Mustache.**
+**Tsuku does not compile templates to PHP and keeps no template cache.** Every `process()` call tokenizes, parses and renders the template again.
+
+Engines that compile templates to cached PHP code (Twig, Mustache, Blade) are considerably faster per render, especially for small templates rendered thousands of times per second.
 
 This is a deliberate trade-off for:
 - **Zero dependencies** (no external packages)
 - **Zero setup** (no cache directories, no configuration)
 - **Extreme simplicity** (install and use immediately)
 
-**Performance improvements are actively planned for future releases.**
+Tsuku is built for exports, feeds and documents, where one render produces a large output.
 :::
 
-## Comprehensive Benchmark Results
+## Benchmark Results (1.4.0)
+
+The library repository ships four benchmarks in `benchmarks/`. These are the numbers we measured for 1.4.0:
 
 **Environment:**
-- PHP 8.4.14
-- 10,000 iterations (after 100 warmup)
-- Real-world e-commerce order template
+- Tsuku 1.4.0, PHP 8.3, run with `php -n` (no OPcache, no Xdebug)
+- Intel Core Ultra 7 265K
+- One run of `php -n benchmarks/run-all.php`; your hardware will differ
 
-### Performance Comparison
+| Benchmark | What it renders | Per render | Throughput |
+|-----------|-----------------|------------|------------|
+| **Simple** (`simple.php`) | CSV with 100 products (variables, `@for`, `@number`) | 0.77 ms | ~1,300 renders/sec |
+| **Complex** (`complex.php`) | 10 categories × 20 products: nested loops, conditions, `@match`, functions | 2.4 ms | ~420 renders/sec |
+| **Variables** (`variables.php`) | 1,000 simple `{variables}` | 6.8 ms | ~146 renders/sec |
+| **CSV Export** (`csv-export.php`) | 1,000 products with `@csv`, `@number`, `@match` | 15.6 ms | ~64 exports/sec (**~64,000 products/sec**) |
 
-| Rank | Engine | Avg Time (ms) | Total (ms) | Renders/Sec | vs Fastest |
-|------|--------|---------------|------------|-------------|------------|
-| 🥇 | **Mustache** | 0.0106 | 106.15 | ~94,000/sec | ✓ FASTEST |
-| 🥈 | **Twig (cached)** | 0.0143 | 143.07 | ~69,000/sec | 1.35x slower |
-| 🥉 | **Twig (no cache)** | 0.0146 | 145.91 | ~68,000/sec | 1.37x slower |
-| 4️⃣ | **Tsuku** | 0.3955 | 3,955.29 | **~2,500/sec** | **37x slower** |
+::: tip What changed in 1.4.0
+Conditions are now parsed once per template into an expression tree instead of being matched with regular expressions every time they are evaluated. According to the [1.4.0 changelog](/changelog), 100k-row feeds render 6–14% faster than with 1.3.0.
+:::
 
 ## Running the Benchmarks Yourself
 
+The benchmarks live in the library repository (they are not installed by `composer require`):
+
 ```bash
-# Install benchmark dependencies
+git clone https://github.com/qoliber/tsuku.git
+cd tsuku
 composer install
 
-# Run the comprehensive benchmark
-composer benchmark
+# All four benchmarks
+php benchmarks/run-all.php
 ```
 
-Or directly:
+Or one at a time:
 
 ```bash
-php benchmark/run.php
+php benchmarks/simple.php      # CSV with 100 products
+php benchmarks/complex.php     # Nested loops + conditions + match + functions
+php benchmarks/variables.php   # 1,000 variables
+php benchmarks/csv-export.php  # 1,000-product CSV export
 ```
+
+Run them with `php -n` (or at least with Xdebug switched off): Xdebug slows PHP down and would distort the numbers.
 
 ## What Was Tested?
 
-The benchmark tests **ALL** of Tsuku's major features with a comprehensive real-world template:
+Between them, the four benchmarks cover the features used in real exports:
 
 ### Directives
-- ✓ `@for` loops with index tracking
+- ✓ `@for` loops, including nested loops (categories → products)
 - ✓ `@if` / `@else` conditionals
-- ✓ `@unless` (inverse conditionals)
-- ✓ `@match` / `@case` / `@default` (pattern matching)
-- ✓ Nested loops (items → features, items → tags)
+- ✓ `@match` / `@case` / `@default` (pattern matching, including `@case` with several values)
 
 ### Functions
-- ✓ **String:** `@upper`, `@lower`, `@capitalize`, `@join`
-- ✓ **Number:** `@number` with different precisions
-- ✓ **Array:** `@length`, `@join`, `@default`
-- ✓ **Date:** `@date` formatting
-
-### Advanced Features
-- ✓ **Ternary expressions:** `@?{condition "true" : "false"}`
-- ✓ **Mathematical expressions:** `price * quantity * (1 - discount / 100)`
-- ✓ **Null handling:** `@default(value, "fallback")`
-- ✓ **Deep nested data access:** `store.order.items.features` (4 levels)
+- ✓ **Escaping:** `@csv`
+- ✓ **Number:** `@number` with decimals
+- ✓ **Many variables:** 1,000 `{variable}` lookups in one template
 
 ### Template Complexity
-The benchmark template includes:
-- 2 order items with features arrays
-- Multiple nested loops
-- Pattern matching for order status & stock status
-- Complex calculations with discounts
-- Conditional feature/tag display
-- 4-level nested data structures
+- 100 to 1,000 rows per render
+- Nested data access (`category.products`, `product.price`)
+- Pattern matching on a status field per row
 
 ## Understanding the Results
 
-### Why is Tsuku 37x slower?
+### Why is Tsuku slower than compiled engines?
 
-With this **comprehensive real-world template** testing ALL features, Tsuku is 37x slower than Mustache because it makes different trade-offs:
-
-1. **No Caching Required**: Tsuku re-parses templates on every render for simplicity
+1. **No Caching**: Tsuku re-parses templates on every render for simplicity
    - No cache directory setup
-   - No file permissions issues
+   - No file permission issues
    - No cache invalidation logic
 
 2. **Zero Dependencies**: Tsuku has NO external dependencies
    - Twig requires multiple packages
    - Easier to install and maintain
 
-3. **Full Lexical Analysis**: Tsuku does complete tokenization and parsing
-   - More flexible syntax
-   - Better error messages
-   - Extensible architecture
+3. **Full Lexical Analysis**: Tsuku does complete tokenization, whitespace control and parsing on every call
+   - Flexible syntax
+   - Error messages with line and column
+   - Extensible architecture (custom functions and directives)
+
+The parsing cost is paid once per `process()` call, not once per row: a 1,000-row export parses its template once and then walks the tree 1,000 times. That is why Tsuku does well on large exports and worse on tiny templates rendered in a tight loop.
 
 ### When Tsuku is the Right Choice
-
-Despite being slower in micro-benchmarks, Tsuku excels when:
 
 ✅ **Simplicity matters** - Zero setup, zero configuration
 
@@ -107,9 +106,9 @@ Despite being slower in micro-benchmarks, Tsuku excels when:
 
 ✅ **Data transformation** - CSV, XML, JSON, YAML generation
 
-✅ **Template is rendered once** - Exports, reports, data feeds
+✅ **One render, big output** - Exports, reports, data feeds
 
-✅ **Memory constraints** - No cache files to maintain
+✅ **Huge datasets** - [`processToStream()`](/guide/streaming) keeps memory bounded by one row
 
 ### When to Use Alternatives
 
@@ -117,64 +116,20 @@ Use Twig or Mustache when:
 
 - Rendering thousands of pages per second (web apps)
 - Template compilation/caching is acceptable
-- Performance is the absolute priority
+- Per-render latency is the absolute priority
 - You're building a high-traffic website
 
 ## Performance Perspective
 
-**0.40 ms per comprehensive template means:**
-- **~2,500 renders per second**
-- Rendering 1,000 complex order summaries = 400ms (~0.4 seconds)
-- Processing one complex CSV export = 0.40ms
-- Batch processing 10,000 records = ~4 seconds
-- Generating 100 reports = ~40ms
+**With the numbers measured above:**
+- A 1,000-product CSV export (escaping, number formatting, `@match`) takes about 16 ms
+- That is roughly 64,000 product rows per second
+- A 100-row CSV takes under 1 ms
+- A template with 1,000 variables takes about 7 ms
 
-For data transformation use cases (Tsuku's primary goal), this performance is **excellent**.
-
-### Real-World Performance Examples
-
-| Task | Records | Time | Acceptable? |
-|------|---------|------|-------------|
-| **CSV Product Export** | 5,000 products | ~2 seconds | ✅ Excellent |
-| **XML Order Feeds** | 1,000 orders | ~0.4 seconds | ✅ Excellent |
-| **JSON API Responses** | 100 responses | ~40ms | ✅ Fast |
-| **PDF Invoice Generation** | 500 invoices | ~1 second | ✅ Great |
-| **Email Templates** | 10,000 emails | ~4 seconds | ✅ Acceptable |
-| **Report Generation** | 50 reports | ~20ms | ✅ Very Fast |
-
-**Bottom Line:** At 2,500 renders/sec, Tsuku is **more than fast enough** for batch processing and data transformation tasks.
-
-## Benchmark Template Details
-
-The benchmark uses a **comprehensive e-commerce order** template featuring:
-
-**Data Structure (4 levels deep):**
-```
-store
-  └─ order
-      ├─ customer (tier, vip status, verification)
-      ├─ items[] (2 products)
-      │   ├─ features[] (3-4 features each)
-      │   └─ tags[] (2 tags each)
-      ├─ shipping (method, cost, delivery time)
-      ├─ payment (method, installments)
-      └─ notes[] (2 special notes)
-```
-
-**Feature Coverage:**
-- **6 directive types**: @for, @if, @unless, @match/@case/@default, @end
-- **10+ functions**: @upper, @lower, @capitalize, @join, @number, @date, @length, @default
-- **Nested loops**: Items → Features (2 levels), Items → Tags (2 levels)
-- **Pattern matching**: Order status (4 cases), Stock status (3 cases)
-- **Ternary operations**: Priority level, rating display
-- **Math expressions**: Discount calculations, price totals
-- **Null handling**: Default values for missing data
-
-This represents a **real-world comprehensive template** with all of Tsuku's capabilities.
+For data transformation use cases (Tsuku's primary goal), this is **more than fast enough**: the database queries that produce the data are usually far slower than rendering it. Measure your own templates with your own data before drawing conclusions - the cost depends mostly on the number of rows and on the functions you call per row.
 
 ## Optimization Tips
-
-Despite Tsuku's current performance limitations, you can still optimize your usage:
 
 ### 1. Reuse Tsuku Instance
 
@@ -194,51 +149,110 @@ foreach ($batches as $batch) {
 }
 ```
 
-**Why?** Function/directive registries are initialized once per instance.
+**Why?** The function registry with its 28 built-in functions is built in the constructor, and your `registerFunction()` / `registerDirective()` calls only have to happen once.
 
-### 2. Use SILENT Mode for Performance
+### 2. Render Many Rows in One Call
 
-Strictness modes have different overhead:
+Every `process()` call parses its template again. Rendering 10,000 rows with one call parses once; calling `process()` 10,000 times parses 10,000 times:
+
+```php
+// ✗ SLOW - the row template is parsed again for every product
+$output = '';
+foreach ($products as $product) {
+    $output .= $tsuku->process($rowTemplate, ['product' => $product]);
+}
+
+// ✓ FAST - parsed once, the loop runs inside Tsuku
+$output = $tsuku->process($template, ['products' => $products]);
+```
+
+### 3. Stream Large Exports
+
+For tens of thousands of rows, hold neither all rows nor the whole output in memory. [`processToStream()`](/guide/streaming) renders the header once, each row as it arrives and the footer once, and hands every piece to a callback:
+
+```php
+$template = 'sku,name
+@for(products as product)
+@csv(product.sku),@csv(product.name)
+@end';
+
+$rows = [
+    ['sku' => 'WID-001', 'name' => 'Widget'],
+    ['sku' => 'GAD-002', 'name' => 'Gadget, Deluxe'],
+];
+
+$tsuku->processToStream($template, [], $rows, 'products', function (string $chunk): void {
+    echo $chunk; // or fwrite($handle, $chunk)
+});
+// Output:
+// sku,name
+// WID-001,Widget
+// GAD-002,"Gadget, Deluxe"
+```
+
+In a real export, `$rows` is a generator that reads from the database. It is consumed lazily, so memory stays bounded by the largest single piece (header, footer or one row).
+
+### 4. Parse Once, Render Many Times
+
+If you really have to render one template many separate times (one e-mail body per customer, say), parse it once with `TemplateParser` and render the tree with a `Compiler` per data set. That is what `process()` does internally, minus the repeated parsing:
+
+```php
+use Qoliber\Tsuku\Compiler\Compiler;
+use Qoliber\Tsuku\DirectiveRegistry;
+use Qoliber\Tsuku\Function\FunctionRegistry;
+use Qoliber\Tsuku\ProcessingContext;
+use Qoliber\Tsuku\StrictnessMode;
+use Qoliber\Tsuku\Template\TemplateParser;
+
+$functions = new FunctionRegistry();   // comes with the built-in functions
+$functions->register('shout', fn(string $text): string => strtoupper($text) . '!');
+$directives = new DirectiveRegistry();
+$context = new ProcessingContext(StrictnessMode::SILENT);
+
+// Parse once (lexer + whitespace control + parser)
+$ast = (new TemplateParser($functions, $directives))->parse('{sku},@shout(name)');
+
+// Render many times
+foreach ([['sku' => 'A-1', 'name' => 'widget'], ['sku' => 'B-2', 'name' => 'gadget']] as $row) {
+    echo (new Compiler($row, $context, $functions, $directives))->compile($ast), "\n";
+}
+// A-1,WIDGET!
+// B-2,GADGET!
+```
+
+Pass the same registries to `TemplateParser` and `Compiler`: the parser needs them to recognise custom directives and to reject unknown functions in conditions, the compiler to call them. Warnings (in `WARNING` mode) are collected in the `ProcessingContext` you pass. To keep using a `Tsuku` instance with the same functions, inject the registries: `new Tsuku(StrictnessMode::SILENT, $directives, new FormatterRegistry(), $functions)`.
+
+For a small template rendered 20,000 times this was about 8x faster than calling `process()` each time on our machine; for one big export it makes no difference.
+
+### 5. Strictness Modes Cost Nothing Until Something Is Missing
+
+The strictness mode is only consulted when a variable or function is missing or a function throws:
 
 ```php
 use Qoliber\Tsuku\StrictnessMode;
 
-// Fastest - no warning collection
+// Missing data renders as empty output
 $tsuku = new Tsuku(StrictnessMode::SILENT);
 
-// Slower - collects warnings
+// Missing data renders as empty output and is recorded in getWarnings()
 $tsuku = new Tsuku(StrictnessMode::WARNING);
 
-// Slower - throws exceptions
+// Missing data throws a TsukuException
 $tsuku = new Tsuku(StrictnessMode::STRICT);
 ```
 
-**Recommendation:** Use `SILENT` in production, `WARNING` in development, `STRICT` for debugging.
+For templates that find all their data, the three modes render at the same speed, so choose the mode for correctness, not speed: `STRICT` in tests and CI, `WARNING` while developing (log `getWarnings()`), `SILENT` or `WARNING` in production. Set the mode in the constructor if you need `getWarnings()` - a mode passed as the third argument of `process()` does not record warnings on the instance. See [Strictness Modes & Errors](/guide/strictness).
 
-### 3. Batch Processing
-
-Process data in batches for better overall workflow performance:
-
-```php
-// Process 1000 products at a time
-$batches = array_chunk($allProducts, 1000);
-
-foreach ($batches as $i => $batch) {
-    $csv = $tsuku->process($template, ['products' => $batch]);
-    file_put_contents("export-part-{$i}.csv", $csv);
-}
-```
-
-### 4. Profile Before Optimizing
+### 6. Profile Before Optimizing
 
 **Tsuku is rarely the bottleneck.**
 
 Typical bottlenecks in data export workflows:
 
-1. **Database queries** (often 100-1000x slower than Tsuku)
+1. **Database queries** (usually much slower than rendering)
 2. **File I/O** (disk writes)
 3. **Network requests** (API calls)
-4. **Data transformation** (before templating)
+4. **Data preparation** (before templating)
 
 **Profile your application:**
 ```php
@@ -261,14 +275,14 @@ echo "Total: " . (($end - $start) * 1000) . "ms\n";
 3. **Data transformation** - Purpose-built for CSV, XML, JSON, YAML generation
 4. **Ease of use** - Install and start using in seconds
 
-**Trade-off:** ~37x slower than optimized, cached engines on comprehensive templates
+**Trade-off:** no compiled-template cache, so it is slower per render than compiled, cached engines
 
 ### Is This Acceptable?
 
-**YES!** At **0.40ms per render** (~2,500/sec), Tsuku is **perfectly suited for:**
+**YES!** At roughly **64,000 CSV rows per second** on our machine, Tsuku is **perfectly suited for:**
 - ✅ Batch data exports (CSV, XML, JSON)
+- ✅ Product feeds with tens of thousands of rows ([streaming](/guide/streaming))
 - ✅ Report generation pipelines
-- ✅ Email template rendering
 - ✅ Data transformation & ETL
 - ✅ API response formatting
 - ✅ One-time document generation
@@ -277,22 +291,13 @@ echo "Total: " . (($end - $start) * 1000) . "ms\n";
 
 - ❌ High-traffic web applications rendering thousands of pages/second
 - ❌ Real-time page generation under heavy load
-- ❌ Sub-millisecond latency requirements
+- ❌ Sub-millisecond latency requirements for small templates
 
 **For Tsuku's intended use case (data transformation), this trade-off is absolutely worth it.**
 
-::: tip PERFORMANCE ROADMAP
-Performance optimizations are planned for future releases, including:
-- Compiled template caching (optional)
-- Optimized parser with lookahead
-- Expression compilation
-- Template precompilation support
-
-**Stay tuned for updates!**
-:::
-
 ## Next Steps
 
+- [Streaming Large Datasets →](/guide/streaming) - Memory-bounded exports
 - [Architecture →](/guide/architecture) - Understanding the compiler pipeline
 - [Best Practices →](/guide/best-practices) - Writing efficient templates
 - [Security →](/guide/security) - Performance vs. security trade-offs

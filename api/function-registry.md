@@ -14,12 +14,25 @@ namespace Qoliber\Tsuku\Function;
 class FunctionRegistry
 {
     public function __construct();
-    public function register(string $name, callable $callback): void;
+    public function register(string $name, callable $handler): void;
+    public function execute(string $name, array $arguments): mixed;
     public function has(string $name): bool;
-    public function get(string $name): callable;
-    public function call(string $name, array $arguments): mixed;
-    public function all(): array;
 }
+```
+
+That is the whole public API: there are no methods to fetch, list or remove functions.
+
+A `Tsuku` instance creates its own registry unless you pass one to its constructor, and it does not expose it. To inspect or share a registry, create it yourself:
+
+```php
+use Qoliber\Tsuku\Tsuku;
+use Qoliber\Tsuku\Function\FunctionRegistry;
+
+$registry = new FunctionRegistry();
+$tsuku = new Tsuku(functionRegistry: $registry);   // 4th constructor argument
+
+$tsuku->registerFunction('badge', fn(string $status): string => strtoupper($status));
+var_dump($registry->has('badge'));                  // bool(true) - it is the same registry
 ```
 
 ## Constructor
@@ -40,10 +53,10 @@ use Qoliber\Tsuku\Function\FunctionRegistry;
 $registry = new FunctionRegistry();
 ```
 
-**Built-in Functions Registered:**
+**Built-in Functions Registered (28):**
 - String functions: `upper`, `lower`, `capitalize`, `trim`, `substr`, `replace`, `concat`
-- Number functions: `number`, `round`, `ceil`, `floor`, `abs`
-- Array functions: `join`, `length`, `first`, `last`
+- Number functions: `number`, `number_format` (alias of `number`), `round`, `ceil`, `floor`, `abs`
+- Array functions: `join`, `length`, `first`, `last`, `split`, `contains`
 - Escaping functions: `html`, `xml`, `json`, `url`, `csv`, `escape`
 - Date functions: `date`, `strtotime`
 - Utility functions: `default`
@@ -52,28 +65,27 @@ $registry = new FunctionRegistry();
 
 ### `register()`
 
-Register a custom function.
+Register a function, or replace one that has the same name (built-ins included).
 
 ```php
-public function register(string $name, callable $callback): void
+public function register(string $name, callable $handler): void
 ```
 
 **Parameters:**
-- `$name` (string) - Function name (alphanumeric + underscores)
-- `$callback` (callable) - Function implementation
+- `$name` (string) - Function name, used as `@name(...)` in templates
+- `$handler` (callable) - Function implementation
 
 **Returns:**
 - void
 
-**Throws:**
-- `\InvalidArgumentException` - If name is invalid or callback is not callable
+The name is not validated. Names that the template lexer reads as something else - names starting with `end`, `else` or `default`, the built-in directive names, names with `-` or `.` - can be registered but never called from a template; see [Function Names](/api/tsuku#function-names).
 
 **Example:**
 
 ```php
 $registry->register('currency', function(float $amount, string $code = 'USD'): string {
     return match($code) {
-        'USD' => ' . number_format($amount, 2),
+        'USD' => '$' . number_format($amount, 2),
         'EUR' => '€' . number_format($amount, 2),
         'GBP' => '£' . number_format($amount, 2),
         default => $code . ' ' . number_format($amount, 2),
@@ -81,27 +93,7 @@ $registry->register('currency', function(float $amount, string $code = 'USD'): s
 });
 ```
 
-**Function Requirements:**
-
-```php
-// ✅ Valid - has return type
-$registry->register('test', function(string $x): string {
-    return $x;
-});
-
-// ❌ Invalid - no return type
-$registry->register('test', function($x) {
-    return $x;
-});
-```
-
-**Valid Function Names:**
-- ✅ `my_function`
-- ✅ `format123`
-- ✅ `custom_formatter`
-- ❌ `my-function` (hyphen not allowed)
-- ❌ `my.function` (dot not allowed)
-- ❌ `@myfunction` (@ not allowed)
+`Tsuku::registerFunction($name, $handler)` does exactly this on the instance's registry (and returns the `Tsuku` instance).
 
 ### `has()`
 
@@ -112,7 +104,7 @@ public function has(string $name): bool
 ```
 
 **Parameters:**
-- `$name` (string) - Function name
+- `$name` (string) - Function name (case-sensitive)
 
 **Returns:**
 - (bool) - True if function exists, false otherwise
@@ -129,98 +121,42 @@ if (!$registry->has('unknown')) {
 }
 ```
 
-### `get()`
-
-Get a registered function.
-
-```php
-public function get(string $name): callable
-```
-
-**Parameters:**
-- `$name` (string) - Function name
-
-**Returns:**
-- (callable) - The function callback
-
-**Throws:**
-- `\RuntimeException` - If function not found
-
-**Example:**
-
-```php
-$upperFunc = $registry->get('upper');
-$result = $upperFunc('hello'); // "HELLO"
-
-try {
-    $func = $registry->get('nonexistent');
-} catch (\RuntimeException $e) {
-    echo "Function not found: " . $e->getMessage();
-}
-```
-
-### `call()`
+### `execute()`
 
 Call a registered function with arguments.
 
 ```php
-public function call(string $name, array $arguments): mixed
+public function execute(string $name, array $arguments): mixed
 ```
 
 **Parameters:**
 - `$name` (string) - Function name
-- `$arguments` (array) - Function arguments (indexed array)
+- `$arguments` (array) - Function arguments (indexed array), passed to the handler as they are
 
 **Returns:**
-- (mixed) - Function result
+- (mixed) - The handler's return value, unchanged (templates cast it to string; `execute()` does not)
 
 **Throws:**
-- `\RuntimeException` - If function not found
+- `Qoliber\Tsuku\Exception\FunctionNotFoundException` - If the function is not registered
+- Anything the handler throws (e.g. a `TypeError`)
 
 **Example:**
 
 ```php
 // Call built-in function
-$result = $registry->call('upper', ['hello']);
+$result = $registry->execute('upper', ['hello']);
 // Returns: "HELLO"
 
 // Call with multiple arguments
-$result = $registry->call('substr', ['Hello World', 0, 5]);
+$result = $registry->execute('substr', ['Hello World', 0, 5]);
 // Returns: "Hello"
 
 // Call custom function
 $registry->register('add', function(int $a, int $b): int {
     return $a + $b;
 });
-$result = $registry->call('add', [5, 3]);
-// Returns: 8
-```
-
-### `all()`
-
-Get all registered functions.
-
-```php
-public function all(): array
-```
-
-**Returns:**
-- (array) - Associative array of function name => callable
-
-**Example:**
-
-```php
-$functions = $registry->all();
-
-foreach ($functions as $name => $callback) {
-    echo "Function: {$name}\n";
-}
-
-// Output:
-// Function: upper
-// Function: lower
-// Function: capitalize
-// ...
+$result = $registry->execute('add', [5, 3]);
+// Returns: 8 (an int)
 ```
 
 ## Complete Example
@@ -235,7 +171,7 @@ $registry = new FunctionRegistry();
 // Register custom functions
 $registry->register('currency', function(float $amount, string $code = 'USD'): string {
     return match($code) {
-        'USD' => ' . number_format($amount, 2),
+        'USD' => '$' . number_format($amount, 2),
         'EUR' => '€' . number_format($amount, 2),
         default => $code . ' ' . number_format($amount, 2),
     };
@@ -247,24 +183,20 @@ $registry->register('slug', function(string $text): string {
 
 // Check if functions exist
 if ($registry->has('currency')) {
-    $result = $registry->call('currency', [99.99, 'EUR']);
+    $result = $registry->execute('currency', [99.99, 'EUR']);
     echo $result; // €99.99
 }
-
-// List all functions
-$allFunctions = $registry->all();
-echo "Total functions: " . count($allFunctions);
 ```
 
 ### Using with Tsuku
 
+Pass the registry to the `Tsuku` constructor (named argument `functionRegistry`, or the 4th positional argument):
+
 ```php
 use Qoliber\Tsuku\Tsuku;
+use Qoliber\Tsuku\Function\FunctionRegistry;
 
-$tsuku = new Tsuku();
-
-// Get registry from Tsuku instance
-$registry = $tsuku->getFunctionRegistry();
+$registry = new FunctionRegistry();
 
 // Register function
 $registry->register('badge', function(string $status): string {
@@ -276,15 +208,22 @@ $registry->register('badge', function(string $status): string {
     };
 });
 
+$tsuku = new Tsuku(functionRegistry: $registry);
+
 // Use in template
 $template = 'Status: @badge(user.status)';
 $result = $tsuku->process($template, ['user' => ['status' => 'active']]);
 // Output: Status: ✓ Active
 ```
 
+The registry is shared, not copied: functions registered on `$registry` later are available to `$tsuku` (and to every other instance created with the same registry).
+
 ### Extending with Multiple Custom Functions
 
 ```php
+use Qoliber\Tsuku\Tsuku;
+use Qoliber\Tsuku\Function\FunctionRegistry;
+
 class CustomFunctions
 {
     public static function register(FunctionRegistry $registry): void
@@ -316,31 +255,37 @@ class CustomFunctions
 }
 
 // Usage
-$tsuku = new Tsuku();
-CustomFunctions::register($tsuku->getFunctionRegistry());
+$registry = new FunctionRegistry();
+CustomFunctions::register($registry);
+$tsuku = new Tsuku(functionRegistry: $registry);
+
+echo $tsuku->process('@phone(p) @format_sku(s) @percent(v, 1) @filesize(b)', [
+    'p' => '5551234567', 's' => ' ab-1 ', 'v' => 0.256, 'b' => 1536000,
+]);
+// Output: (555) 123-4567 AB-1 25.6% 1.46 MB
 ```
 
-## Function Signature Requirements
+## Function Signatures
 
-### Return Type Declaration
+### Return Values
 
-Functions **must** have a return type:
+A return type is **not** required - any callable works. In a template the return value is cast to string (`null`/`false` print nothing, `true` prints `1`, arrays print `Array` with a PHP warning); `execute()` returns it unchanged.
 
 ```php
-// ✅ Valid
-$registry->register('test', function(string $x): string {
+// ✅ Works
+$registry->register('test', function($x) {
     return $x;
 });
 
-// ❌ Invalid - no return type
-$registry->register('test', function($x) {
+// ✅ Clearer - with types
+$registry->register('test', function(string $x): string {
     return $x;
 });
 ```
 
 ### Parameter Type Hints
 
-Recommended but not required:
+Recommended but not required. In templates, quoted literals and number literals arrive as strings and variables keep their PHP type; typed parameters are coerced by PHP as usual (`"5"` → `5`):
 
 ```php
 // ✅ Best practice - full type hints
@@ -364,11 +309,11 @@ $registry->register('greet', function(string $name, string $greeting = 'Hello'):
 });
 
 // Call with 1 argument
-$result = $registry->call('greet', ['John']);
+$result = $registry->execute('greet', ['John']);
 // Returns: "Hello, John!"
 
 // Call with 2 arguments
-$result = $registry->call('greet', ['John', 'Hi']);
+$result = $registry->execute('greet', ['John', 'Hi']);
 // Returns: "Hi, John!"
 ```
 
@@ -377,77 +322,86 @@ $result = $registry->call('greet', ['John', 'Hi']);
 Supported:
 
 ```php
-$registry->register('concat', function(string ...$parts): string {
+$registry->register('glue', function(string ...$parts): string {
     return implode('', $parts);
 });
 
-$result = $registry->call('concat', ['Hello', ' ', 'World']);
+$result = $registry->execute('glue', ['Hello', ' ', 'World']);
 // Returns: "Hello World"
 ```
 
 ## Built-in Functions List
 
-All built-in functions are registered automatically:
+All built-in functions are registered automatically. Signatures as implemented: handlers typed `mixed` cast their input; `substr`, `replace` and `strtotime` pass it straight to PHP, so an integer from your data (e.g. `@substr(order.id, 0, 3)` with `'id' => 12345`) is a `TypeError` - in a template a function error, i.e. empty output in `SILENT` mode. Cast such values to string in your data.
 
 **String Functions:**
-- `upper(string): string`
-- `lower(string): string`
-- `capitalize(string): string`
-- `trim(string): string`
-- `substr(string, int, ?int): string`
-- `replace(string, string, string): string`
-- `concat(...string): string`
+- `upper(mixed $str): string` - `strtoupper()`, byte-based (no multibyte case mapping)
+- `lower(mixed $str): string`
+- `capitalize(mixed $str): string` - `ucfirst()`
+- `trim(mixed $str): string`
+- `substr(string $str, int $start, ?int $length = null): string`
+- `replace(string|array $str, mixed $search, mixed $replace): string|array` - `str_replace()`
+- `concat(mixed ...$parts): string`
 
 **Number Functions:**
-- `number(float, int, string, string): string`
-- `round(float, int): float`
-- `ceil(float): int`
-- `floor(float): int`
-- `abs(float): float`
+- `number(mixed $num, int $decimals = 0, string $decPoint = '.', string $thousandsSep = ','): string`
+- `number_format(...)` - same as `number`
+- `round(mixed $num, int $precision = 0): float`
+- `ceil(mixed $num): float`
+- `floor(mixed $num): float`
+- `abs(mixed $num): float`
 
 **Array Functions:**
-- `join(array, string): string`
-- `length(array|string): int`
-- `first(array): mixed`
-- `last(array): mixed`
+- `join(mixed $array, string $glue = ','): string`
+- `length(mixed $value): int` - `count()` for arrays, string length in bytes otherwise
+- `first(mixed $array): mixed` - `null` for an empty or non-array value
+- `last(mixed $array): mixed`
+- `split(mixed $value, string $delimiter = ','): array` - `""`/`null` give `[]`, an array is returned unchanged, an empty delimiter splits into characters
+- `contains(mixed $haystack, mixed $needle): bool` - same rules as `needle in haystack` in conditions
 
 **Escaping Functions:**
-- `html(string): string`
-- `xml(string): string`
-- `json(string): string`
-- `url(string): string`
-- `csv(string): string`
-- `escape(string, string): string`
+- `html(mixed $str): string` - `htmlspecialchars(ENT_QUOTES | ENT_HTML5)`
+- `xml(mixed $str): string` - `htmlspecialchars(ENT_QUOTES | ENT_XML1)`
+- `json(mixed $str): string` - a quoted JSON string; `"`, `'`, `<`, `>`, `&` become `"`, `'`, `<`, `>`, `&`
+- `url(mixed $str): string` - `rawurlencode()`
+- `csv(mixed $str): string` - quotes the value (doubling `"`) when it contains `,`, `"` or a line break
+- `escape(mixed $str, string $type = 'html'): string` - `html`, `xml`, `json`, `url` or `csv`
 
 **Date Functions:**
-- `date(string, ?int): string`
-- `strtotime(string): int`
+- `date(string $format, mixed $timestamp = null): string` - the timestamp is cast to `int`; pass a Unix timestamp, not a date string
+- `strtotime(string $str): int|false`
 
 **Utility Functions:**
-- `default(mixed, mixed): mixed`
+- `default(mixed $value, mixed $default): mixed` - `$default` when `empty($value)` (so also for `"0"` and `0`)
 
 ## Error Handling
 
 ### Function Not Found
 
 ```php
+use Qoliber\Tsuku\Exception\FunctionNotFoundException;
+
 try {
-    $result = $registry->call('nonexistent', ['arg']);
-} catch (\RuntimeException $e) {
+    $result = $registry->execute('nonexistent', ['arg']);
+} catch (FunctionNotFoundException $e) {
     echo "Error: " . $e->getMessage();
     // Error: Function 'nonexistent' not found
+    echo $e->getFunctionName(); // nonexistent
 }
 ```
+
+`FunctionNotFoundException` extends `TsukuException`. In templates, an unknown function in output follows the [strictness mode](/guide/strictness); an unknown function in a condition always throws `FunctionNotFoundException`.
 
 ### Invalid Function Name
 
+There is no name check, so this does not throw:
+
 ```php
-try {
-    $registry->register('invalid-name', fn() => 'test');
-} catch (\InvalidArgumentException $e) {
-    echo "Error: " . $e->getMessage();
-}
+$registry->register('invalid-name', fn() => 'test');
+var_dump($registry->has('invalid-name')); // bool(true)
 ```
+
+Calling it from a template fails, because `@invalid-name(...)` is not a function call: the lexer throws `ParseException` ("Invalid @ syntax ... (write @@ for a literal @)").
 
 ### Type Errors
 
@@ -458,11 +412,13 @@ $registry->register('add', function(int $a, int $b): int {
 
 try {
     // Passing strings instead of integers
-    $result = $registry->call('add', ['foo', 'bar']);
+    $result = $registry->execute('add', ['foo', 'bar']);
 } catch (\TypeError $e) {
     echo "Type error: " . $e->getMessage();
 }
 ```
+
+In a template the same `TypeError` is a function error: removed in `SILENT`, a warning in `WARNING`, a `TsukuException` in `STRICT`.
 
 ## Performance Considerations
 
@@ -472,7 +428,7 @@ Function lookup is O(1) using array access:
 
 ```php
 // Fast - single array lookup
-$registry->call('upper', ['text']);
+$registry->execute('upper', ['text']);
 ```
 
 ### Avoid Reregistration
@@ -483,28 +439,26 @@ Register functions once, reuse many times:
 // ✅ Good - register once
 $registry->register('format', fn($x) => strtoupper($x));
 for ($i = 0; $i < 1000; $i++) {
-    $registry->call('format', ["text{$i}"]);
+    $registry->execute('format', ["text{$i}"]);
 }
 
 // ❌ Bad - registering in loop
 for ($i = 0; $i < 1000; $i++) {
     $registry->register('format', fn($x) => strtoupper($x));
-    $registry->call('format', ["text{$i}"]);
+    $registry->execute('format', ["text{$i}"]);
 }
 ```
 
-## Thread Safety
+## Shared State
 
-FunctionRegistry is **stateful**:
-- ✅ Safe: Multiple `call()` on same instance
-- ⚠️ Caution: Concurrent `register()` calls may cause race conditions
-- Recommendation: Register all functions at initialization
+A FunctionRegistry is an ordinary mutable object:
+- ✅ Safe: any number of `execute()` / template calls
+- ⚠️ A registry shared between `Tsuku` instances is shared state - a function registered or replaced through one instance changes all of them
+- Recommendation: register all functions at initialization
 
 ## Memory Usage
 
-- Registry size: ~500 bytes + (number of functions × 200 bytes)
-- Built-in functions: ~5 KB
-- Custom functions: ~200 bytes per function
+A new registry with the 28 built-in closures takes about 12 KB (measured with `memory_get_usage()` on PHP 8.3); each custom function adds the size of its closure.
 
 ## Next Steps
 

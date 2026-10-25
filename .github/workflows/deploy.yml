@@ -1,0 +1,46 @@
+name: Deploy tsukuru.dev
+
+# Every push to main publishes the docs: VitePress is built here and the
+# static site is copied to the server, where nginx serves it as is.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-tsukuru-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build
+        run: |
+          npm install --no-audit --no-fund
+          npx vitepress build
+
+      - name: Upload
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "::warning::DEPLOY_SSH_KEY is not set, so the site was built but not deployed."
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The key is limited on the server to writing into the site folder
+          # (rrsync -wo), so "/" here is /home/tsukuru/site there.
+          rsync -rlz --delete-after --delay-updates --chmod=D755,F644 \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            .vitepress/dist/ tsukuru@46.62.158.225:/

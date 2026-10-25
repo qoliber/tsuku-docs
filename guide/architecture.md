@@ -5,10 +5,10 @@ Tsuku uses a clean three-stage compiler pipeline inspired by traditional program
 ## The Three-Stage Pipeline
 
 ```
-Template String → Lexer → Tokens → Parser → AST → Compiler → Output String
+Template String → Lexer (+ whitespace control) → Tokens → Parser → AST → Compiler → Output String
 ```
 
-Each stage has a single, well-defined responsibility.
+Each stage has a single, well-defined responsibility. `Template\TemplateParser` runs the first two stages; `process()` and `processToStream()` share it, so both see exactly the same tree.
 
 ## Stage 1: Lexer (Lexical Analysis)
 
@@ -18,12 +18,15 @@ Each stage has a single, well-defined responsibility.
 
 ### What the Lexer Does
 
-The Lexer reads your template character by character and identifies:
+First the Lexer removes `\` line continuations (a backslash followed by a line break). Then it scans the template and identifies:
 - Plain text
 - Variables (`{name}`)
-- Directives (`@if`, `@for`, `@match`)
 - Functions (`@upper()`)
+- Inline conditions (`@?{...}`) and the `@@` escape
+- Directives (`@if`, `@elseif`, `@else`, `@for`, `@match`, `@case`, `@default`, registered custom directives)
 - End markers (`@end`)
+
+Finally `WhitespaceControl` (`src/Lexer/WhitespaceControl.php`) decides, once per template, which whitespace around block directives is layout and drops it from the text tokens - see [Whitespace Control](/guide/whitespace-control).
 
 ### Example
 
@@ -40,17 +43,20 @@ Hello {name}, @if(admin)welcome@end
     TEXT(", "),
     DIRECTIVE_IF("admin"),
     TEXT("welcome"),
-    DIRECTIVE_END
+    DIRECTIVE_END,
+    EOF
 ]
 ```
+
+Every token also carries the line and column where it starts, which is how error messages can say `at line 3, column 7`.
 
 ### Why a Lexer?
 
 **Makes parsing easier** - Instead of working with a raw string, the parser works with structured chunks.
 
-**Preserves whitespace** - Every character is captured exactly, including spaces and newlines.
+**Decides layout once** - Whitespace control works on the token list, before parsing, so rendering never re-scans text.
 
-**Fast** - Single pass through the template string.
+**Fast** - One pass through the template string, plus one pass over the tokens.
 
 ## Stage 2: Parser (Syntax Analysis)
 
@@ -60,13 +66,13 @@ Hello {name}, @if(admin)welcome@end
 
 ### What the Parser Does
 
-The Parser takes the flat list of tokens and builds a **tree structure** that represents the template's logical structure.
+The Parser takes the flat list of tokens and builds a **tree structure** that represents the template's logical structure. The conditions of `@if`, `@unless`, `@elseif` and `@?{...}` are parsed here as well, by `ExpressionParser` (`src/Expression/`), into a small expression tree that is stored on the node.
 
 ### Example
 
 **Tokens:**
 ```php
-[TEXT("Hello "), VARIABLE("name"), DIRECTIVE_IF("admin"), TEXT("welcome"), DIRECTIVE_END]
+[TEXT("Hello "), VARIABLE("name"), TEXT(", "), DIRECTIVE_IF("admin"), TEXT("welcome"), DIRECTIVE_END, EOF]
 ```
 
 **Output (AST):**
@@ -74,7 +80,8 @@ The Parser takes the flat list of tokens and builds a **tree structure** that re
 TemplateNode
 ├── TextNode("Hello ")
 ├── VariableNode("name")
-└── IfNode(condition: "admin")
+├── TextNode(", ")
+└── IfNode(condition: "admin", expression: PathExpression("admin"))
     └── TextNode("welcome")
 ```
 
@@ -82,9 +89,9 @@ TemplateNode
 
 **Handles nesting** - Tree structure naturally represents nested loops and conditionals.
 
-**Validates structure** - Parser catches syntax errors (missing `@end`, etc.).
+**Validates structure** - Parser catches syntax errors (missing `@end`, a stray `@else`, malformed conditions, unknown functions in conditions) and reports them as a `ParseException` / `FunctionNotFoundException` with line and column.
 
-**Clean compilation** - Compiler just walks the tree, no parsing logic needed.
+**Clean compilation** - Compiler just walks the tree; conditions are already parsed.
 
 ## Stage 3: Compiler (Code Generation)
 
@@ -100,9 +107,11 @@ The Compiler uses the **Visitor Pattern** to traverse the AST tree and execute e
 2. **TextNode** - Output text as-is
 3. **VariableNode** - Look up variable in data, output value
 4. **ForNode** - Iterate over array, process children for each item
-5. **IfNode** - Evaluate condition, process appropriate children
-6. **MatchNode** - Match value, process matching case
-7. **FunctionNode** - Execute function, output result
+5. **IfNode** - Evaluate the parsed condition, process appropriate children
+6. **TernaryNode** - Evaluate the parsed condition, output one of the two values
+7. **MatchNode** - Match value, process matching case
+8. **FunctionNode** - Execute function, output result
+9. **DirectiveNode** - Render the body, pass it to the registered directive handler
 
 ### Example
 
@@ -111,6 +120,7 @@ The Compiler uses the **Visitor Pattern** to traverse the AST tree and execute e
 TemplateNode
 ├── TextNode("Hello ")
 ├── VariableNode("name")
+├── TextNode(", ")
 └── IfNode(condition: "admin")
     └── TextNode("welcome")
 ```
@@ -121,8 +131,9 @@ TemplateNode
 TemplateNode.accept(compiler)
   ├── TextNode.accept(compiler) → "Hello "
   ├── VariableNode.accept(compiler) → "John" (lookup in data)
+  ├── TextNode.accept(compiler) → ", "
   └── IfNode.accept(compiler)
-      └── if (admin == true) TextNode.accept(compiler) → "welcome"
+      └── admin is truthy → TextNode.accept(compiler) → "welcome"
 
 Final Output: "Hello John, welcome"
 ```
@@ -142,23 +153,24 @@ Final Output: "Hello John, welcome"
 A **tree representation** of your template's structure.
 
 - **Root:** TemplateNode (contains all top-level nodes)
-- **Branches:** IfNode, ForNode, MatchNode (contain children)
-- **Leaves:** TextNode, VariableNode, FunctionNode (produce output)
+- **Branches:** IfNode, ForNode, MatchNode, DirectiveNode (contain children)
+- **Leaves:** TextNode, VariableNode, FunctionNode, TernaryNode (produce output)
 
 ### Nodes
 
-Each **element** in the AST tree.
+Each **element** in the AST tree. Nodes are immutable: their data is in public readonly properties.
 
 **Node Types:**
 - `TemplateNode` - Root container
 - `TextNode` - Plain text content
 - `VariableNode` - Variable reference
 - `ForNode` - Loop directive
-- `IfNode` - Conditional directive
+- `IfNode` - `@if` / `@unless` (an `@elseif` chain is a nested `IfNode` in the else branch)
 - `MatchNode` - Pattern matching
 - `CaseNode` - Match case
 - `FunctionNode` - Function call
-- `TernaryNode` - Ternary operator
+- `TernaryNode` - Inline condition `@?{...}`
+- `DirectiveNode` - Registered custom block directive
 
 ### Tokens
 
@@ -167,15 +179,19 @@ The **smallest meaningful units** from the Lexer.
 **Token Types:**
 - `TEXT` - Plain text
 - `VARIABLE` - `{name}`
+- `FUNCTION` - `@upper(...)`
+- `TERNARY` - `@?{...}`
 - `DIRECTIVE_FOR` - `@for(...)`
 - `DIRECTIVE_IF` - `@if(...)`
+- `DIRECTIVE_UNLESS` - `@unless(...)`
+- `DIRECTIVE_ELSE` - `@else`
+- `DIRECTIVE_ELSEIF` - `@elseif(...)`
 - `DIRECTIVE_MATCH` - `@match(...)`
 - `DIRECTIVE_CASE` - `@case(...)`
 - `DIRECTIVE_DEFAULT` - `@default`
-- `DIRECTIVE_ELSE` - `@else`
+- `DIRECTIVE_CUSTOM` - a registered custom directive
 - `DIRECTIVE_END` - `@end`
-- `FUNCTION` - `@upper(...)`
-- `EOF` - End of file
+- `EOF` - End of input
 
 ### Visitor Pattern
 
@@ -186,83 +202,96 @@ A design pattern where nodes **"accept"** a visitor (the compiler).
 - Easy to add new operations without changing nodes
 - Type-safe method dispatch
 
-**Implementation:**
+**Implementation (simplified from the source):**
 ```php
 interface Node {
-    public function accept(NodeVisitor $visitor): string;
+    public function accept(NodeVisitor $visitor): mixed;
 }
 
 class TextNode implements Node {
-    public function accept(NodeVisitor $visitor): string {
+    public function __construct(
+        public readonly string $content,
+    ) {}
+
+    public function accept(NodeVisitor $visitor): mixed {
         return $visitor->visitText($this);
     }
 }
 
-class Compiler implements NodeVisitor {
+class Compiler implements NodeVisitor, DirectiveVisitor {
     public function visitText(TextNode $node): string {
-        return $node->text;
+        return $node->content;
     }
 }
 ```
+
+`DirectiveNode` is visited through the separate `DirectiveVisitor` interface, so visitors written against `NodeVisitor` before 1.4.0 still compile.
 
 ## Class Structure
 
 ### Lexer Classes
 
 - `Lexer` - Main lexer class
-- `Token` - Represents one token
+- `Token` - Represents one token (type, value, line, column)
 - `TokenType` - Enum of all token types
+- `WhitespaceControl` - Removes layout whitespace around block directives
+- `SourceMap` - Maps offsets back to template lines and columns
 
 ### Parser Classes
 
 - `Parser` - Main parser class
 - `*Node` - AST node classes (TextNode, IfNode, etc.)
-- `NodeVisitor` - Interface for visiting nodes
+- `NodeVisitor`, `DirectiveVisitor` - Interfaces for visiting nodes
 
-### Compiler Classes
+### Expression Classes
 
-- `Compiler` - Main compiler class (implements NodeVisitor)
-- `ExpressionEvaluator` - Evaluates conditions
+- `ExpressionParser` - Parses conditions into expression trees (at parse time)
+- `ExpressionEvaluator` - Evaluates parsed conditions against the data
+- `Expression` and its nodes (`OrExpression`, `AndExpression`, `NotExpression`, `ComparisonExpression`, `LiteralExpression`, `PathExpression`, `FunctionCallExpression`), `Membership` (rules of `in`)
+
+### Compiler and Registries
+
+- `Compiler` - Main compiler class (implements `NodeVisitor` and `DirectiveVisitor`)
 - `FunctionRegistry` - Manages template functions
+- `DirectiveRegistry` - Manages custom block directives
+- `FormatterRegistry` - Stores formatters (not used by any template syntax in 1.4.0)
 
 ## Benefits of This Architecture
 
-### ✅ Exact Whitespace Preservation
+### ✅ Predictable Whitespace
 
-The Lexer captures every character, including spaces and newlines. Your output matches your template exactly.
+Content lines are output exactly as written. Whitespace that only lays out directives (directive-only lines, indentation before `@else` / `@end`, ...) is identified once, in the lexer stage, by five fixed rules. See [Whitespace Control](/guide/whitespace-control).
 
 ### ✅ Proper Nesting Validation
 
-The Parser builds a tree or throws an error. Impossible to have unclosed directives.
+The Parser builds a tree or throws a `ParseException` that names the line and column - including where the unclosed directive was opened. Unclosed directives cannot slip through.
 
 ### ✅ Clean Separation of Concerns
 
-- Lexer: Tokenization
-- Parser: Structure building
+- Lexer: Tokenization and layout whitespace
+- Parser: Structure building and condition parsing
 - Compiler: Output generation
 
 Each stage does one thing well.
 
 ### ✅ Easy to Extend
 
-Want to add a new directive?
-1. Add token type to Lexer
-2. Create Node class
-3. Add visit method to Compiler
-4. Done!
+Most extensions need no core change at all:
+- New template functions: `registerFunction()` ([Custom Functions](/guide/custom-functions))
+- New block syntax `@name(...) ... @end`: `registerDirective()` ([Custom Directives](/guide/custom-directives))
 
-No need to rewrite existing code.
+New built-in syntax would mean a token type, lexer and parser support, a node class and a visit method in the Compiler.
 
 ### ✅ Fast Execution
 
-Single pass through the tree. No repeated parsing or regex matching during compilation.
+Single pass through the tree. Conditions are parsed once per template into an expression tree and are not re-parsed for every row, and layout whitespace is decided before rendering. Regular expressions are used while lexing (variables, directive names) and in small, anchored checks when function arguments are resolved; the template text itself is never re-scanned during rendering.
 
 ### ✅ Type Safety
 
 Full PHP 8.1+ type hints throughout:
 - All nodes are strongly typed
 - All methods have return type declarations
-- Enums for token types
+- Enums for token types and strictness modes
 - Strict types enabled everywhere
 
 ## Comparison to Other Approaches
@@ -274,17 +303,17 @@ Full PHP 8.1+ type hints throughout:
 - Easy to extend
 - Type-safe
 - Fast
-- Proper error handling
+- Proper error handling with line and column
 
 **Cons:**
 - More complex to understand initially
 - More code (but cleaner)
 
-### Regex-Based (Blade, Mustache)
+### Regex Substitution
 
 ```php
 // Simple regex approach
-$output = preg_replace_callback('/{{(.+?)}}/', function($m) {
+$output = preg_replace_callback('/{{(.+?)}}/', function($m) use ($data) {
     return $data[$m[1]] ?? '';
 }, $template);
 ```
@@ -299,10 +328,10 @@ $output = preg_replace_callback('/{{(.+?)}}/', function($m) {
 - Error-prone
 - Harder to maintain
 
-### PHP Eval (Magento)
+### Plain PHP Templates (e.g. Magento `.phtml`)
 
 ```php
-// PHP code in templates (risky!)
+// PHP code in templates
 <?php foreach ($items as $item): ?>
     <div><?= $item ?></div>
 <?php endforeach; ?>
@@ -312,7 +341,7 @@ $output = preg_replace_callback('/{{(.+?)}}/', function($m) {
 - Full PHP power
 
 **Cons:**
-- Security risks (code injection)
+- Templates can run any code - unsuitable for templates edited by non-developers
 - Mixing logic and presentation
 - Hard to sandbox
 - No validation
@@ -347,36 +376,71 @@ $output = $compiler->compile($ast);
 // "John"
 ```
 
+`Tsuku::process()` does the same, but passes its registries along (`new Lexer($template, $directiveNames)`, `new Parser($tokens, $sourceMap, $functionRegistry)`, `new Compiler($data, $context, $functionRegistry, $directiveRegistry)`), so custom functions and directives work. See [API Reference](/api/#advanced-direct-pipeline-access).
+
 ## Source Code Organization
 
 ```
 src/
-├── Lexer/
-│   ├── Lexer.php          # Tokenization
-│   ├── Token.php          # Token representation
-│   └── TokenType.php      # Token types enum
 ├── Ast/
-│   ├── Parser.php         # AST building
-│   ├── Node.php           # Base node interface
-│   ├── NodeVisitor.php    # Visitor interface
-│   ├── TemplateNode.php   # Root node
-│   ├── TextNode.php       # Text content
-│   ├── VariableNode.php   # Variables
-│   ├── ForNode.php        # Loops
-│   ├── IfNode.php         # Conditionals
-│   ├── MatchNode.php      # Pattern matching
-│   ├── CaseNode.php       # Match cases
-│   ├── FunctionNode.php   # Functions
-│   └── TernaryNode.php    # Ternary operator
+│   ├── Parser.php              # AST building
+│   ├── Node.php                # Node interface
+│   ├── NodeVisitor.php         # Visitor interface
+│   ├── DirectiveVisitor.php    # Visitor interface for custom directives
+│   ├── TemplateNode.php        # Root node
+│   ├── TextNode.php            # Text content
+│   ├── VariableNode.php        # Variables
+│   ├── ForNode.php             # Loops
+│   ├── IfNode.php              # @if / @unless / @elseif
+│   ├── MatchNode.php           # Pattern matching
+│   ├── CaseNode.php            # Match cases
+│   ├── FunctionNode.php        # Functions
+│   ├── TernaryNode.php         # Inline conditions @?{...}
+│   └── DirectiveNode.php       # Custom block directives
 ├── Compiler/
-│   ├── Compiler.php       # Main compiler
-│   └── ExpressionEvaluator.php # Condition evaluation
+│   └── Compiler.php            # Main compiler
+├── Exception/
+│   ├── TsukuException.php      # Base exception
+│   ├── ParseException.php
+│   ├── FunctionNotFoundException.php
+│   ├── DirectiveNotFoundException.php
+│   ├── FormatterNotFoundException.php
+│   └── InvalidTemplateException.php
+├── Expression/
+│   ├── ExpressionParser.php    # Condition parsing
+│   ├── ExpressionEvaluator.php # Condition evaluation
+│   ├── Expression.php          # Expression node interface
+│   ├── AndExpression.php
+│   ├── OrExpression.php
+│   ├── NotExpression.php
+│   ├── ComparisonExpression.php
+│   ├── LiteralExpression.php
+│   ├── PathExpression.php
+│   ├── FunctionCallExpression.php
+│   ├── InlineCondition.php     # Parsed @?{...}
+│   └── Membership.php          # Rules of "in" / @contains
 ├── Function/
-│   └── FunctionRegistry.php # Function management
+│   └── FunctionRegistry.php    # Function management
+├── Lexer/
+│   ├── Lexer.php               # Tokenization
+│   ├── Token.php               # Token representation
+│   ├── TokenType.php           # Token types enum
+│   ├── WhitespaceControl.php   # Layout whitespace rules
+│   └── SourceMap.php           # Offsets → line/column
+├── Streaming/
+│   └── StreamingProcessor.php  # processToStream()
+├── Support/
+│   ├── DataAccessor.php        # Dot-notation lookup (internal)
+│   └── Syntax.php              # Quote-aware scanning (internal)
 ├── Template/
-│   ├── Template.php       # Template class
-│   └── TemplateInterface.php
-└── Tsuku.php             # Main API
+│   ├── Template.php            # Template class
+│   ├── TemplateInterface.php
+│   └── TemplateParser.php      # Lexer + parser
+├── DirectiveRegistry.php       # Custom directive management
+├── FormatterRegistry.php
+├── ProcessingContext.php       # Strictness mode + warnings
+├── StrictnessMode.php          # SILENT / WARNING / STRICT
+└── Tsuku.php                   # Main API
 ```
 
 ## Further Reading
@@ -392,7 +456,7 @@ src/
 **Similar Architectures:**
 - Twig (PHP) - Lexer → Parser → Compiler
 - Babel (JavaScript) - Parse → Transform → Generate
-- TypeScript Compiler - Scanner → Parser → Checker → Emitter
+- TypeScript Compiler - Scanner → Parser → Binder → Checker → Emitter
 
 ## Next Steps
 
