@@ -40,7 +40,7 @@ Real conditions, whitespace control and custom directives. Template output chang
 ### Fixed
 - `and`/`&&` evaluated only the first comparison; `or`/`||` and `in` conditions were silently false.
 - A function call or a literal used alone as a condition (`@if(@length(items))`) was always false.
-- `@if (x)`, `@for (x)` (whitespace before the parenthesis) left a stray `)` in the output; `@match (x)` was a `ParseException`.
+- `@if (x)`, `@for (x)`, `@unless (x)` and `@case (x)` (whitespace before the parenthesis) left a stray `)` in the output; `@match (x)` was a `ParseException`.
 - An operator character inside a string on the left of a comparison (`"a>b" == x`) split the condition there.
 - The line break after an `@end` that follows content on its line was swallowed, merging CSV rows (`{sku},@if(qty > 0)in@else out@end` produced `A,inB, out`).
 - Indentation of directive-only lines leaked into the output, also into the previous branch body, e.g. an indented multi-line `@match` rendered `A,R\n  B,B`.
@@ -66,7 +66,7 @@ Each change is shown with 1.3.0 and 1.4.0 output in [Upgrading from 1.3](/guide/
 - **CRLF templates** follow the same rules as LF templates.
 - **Conditions that 1.3.0 evaluated silently and wrongly now throw** `ParseException` / `FunctionNotFoundException`, e.g. the JSON "comma" idiom `@if(index < length(items) - 1),@end` (never emitted a comma in 1.3.0) and conditions calling unregistered functions.
 - **Conditions with `and`/`or`/`in`/`!`/a lone function call** now evaluate as written; check templates whose output depended on the previous wrong results.
-- The library's `examples/` output changes (captured 1.3.0 output in `tests/Fixtures/v1.3.0/examples`, 1.4.0 differences in `tests/Fixtures/v1.4.0/examples`): 02 one user per line instead of one merged line; 04, 08, 09 leaked indentation removed; 07 product rows no longer merged and leaked indentation removed; 10 the case text no longer inherits the indentation of the `@match` line; 11 now stops at its first example with a `ParseException` for `i < length(product.images) - 1` (1.3.0 printed invalid JSON and stopped at the fifth).
+- The library's `examples/` output changes (captured 1.3.0 output in `tests/Fixtures/v1.3.0/examples`, 1.4.0 differences in `tests/Fixtures/v1.4.0/examples`): 02 one user per line instead of one merged line; 04, 08, 09 leaked indentation removed; 07 product rows no longer merged and leaked indentation removed; 10 the case text no longer inherits the indentation of the `@match` line; 11 now stops at its first example with a `ParseException` for `i < length(product.images) - 1` (1.3.0 printed three invalid JSON responses and threw at the fourth, on `"@context"`).
 
 ## [1.3.0] - 2026-05-03
 

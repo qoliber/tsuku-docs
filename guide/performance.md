@@ -20,16 +20,16 @@ Tsuku is built for exports, feeds and documents, where one render produces a lar
 The library repository ships four benchmarks in `benchmarks/`. These are the numbers we measured for 1.4.0:
 
 **Environment:**
-- Tsuku 1.4.0, PHP 8.3, run with `php -n` (no OPcache, no Xdebug)
-- Intel Core Ultra 7 265K
-- One run of `php -n benchmarks/run-all.php`; your hardware will differ
+- Tsuku 1.4.0, PHP 8.3.36, run as `/usr/bin/php8.3 -n benchmarks/run-all.php` (no OPcache, no Xdebug)
+- Intel Core Ultra 7 265K, Linux
+- Median of 9 runs, spread about ±5%; PHP 8.1 and 8.5 were within 10%. Your hardware will differ
 
 | Benchmark | What it renders | Per render | Throughput |
 |-----------|-----------------|------------|------------|
-| **Simple** (`simple.php`) | CSV with 100 products (variables, `@for`, `@number`) | 0.77 ms | ~1,300 renders/sec |
-| **Complex** (`complex.php`) | 10 categories × 20 products: nested loops, conditions, `@match`, functions | 2.4 ms | ~420 renders/sec |
-| **Variables** (`variables.php`) | 1,000 simple `{variables}` | 6.8 ms | ~146 renders/sec |
-| **CSV Export** (`csv-export.php`) | 1,000 products with `@csv`, `@number`, `@match` | 15.6 ms | ~64 exports/sec (**~64,000 products/sec**) |
+| **Simple** (`simple.php`) | CSV with 100 products (variables, `@for`, `@number`) | 0.16 ms | ~6,400 renders/sec |
+| **Complex** (`complex.php`) | 10 categories × 20 products: nested loops, conditions, `@match`, functions | 0.56 ms | ~1,800 renders/sec |
+| **Variables** (`variables.php`) | 1,000 simple `{variables}` | 1.3 ms | ~760 renders/sec |
+| **CSV Export** (`csv-export.php`) | 1,000 products with `@csv`, `@number`, `@match` | 2.9 ms | ~350 exports/sec (**~350,000 products/sec**) |
 
 ::: tip What changed in 1.4.0
 Conditions are now parsed once per template into an expression tree instead of being matched with regular expressions every time they are evaluated. According to the [1.4.0 changelog](/changelog), 100k-row feeds render 6–14% faster than with 1.3.0.
@@ -57,7 +57,7 @@ php benchmarks/variables.php   # 1,000 variables
 php benchmarks/csv-export.php  # 1,000-product CSV export
 ```
 
-Run them with `php -n` (or at least with Xdebug switched off): Xdebug slows PHP down and would distort the numbers.
+Run them with `php -n` (or at least with Xdebug switched off): Xdebug in develop mode makes every benchmark about 5x slower. `run-all.php` starts each benchmark with the same PHP binary and options it was started with, and its header shows the PHP version, CPU and whether Xdebug or OPcache is active.
 
 ## What Was Tested?
 
@@ -122,10 +122,10 @@ Use Twig or Mustache when:
 ## Performance Perspective
 
 **With the numbers measured above:**
-- A 1,000-product CSV export (escaping, number formatting, `@match`) takes about 16 ms
-- That is roughly 64,000 product rows per second
+- A 1,000-product CSV export (escaping, number formatting, `@match`) takes about 3 ms
+- That is roughly 350,000 product rows per second
 - A 100-row CSV takes under 1 ms
-- A template with 1,000 variables takes about 7 ms
+- A template with 1,000 variables takes about 1.3 ms
 
 For data transformation use cases (Tsuku's primary goal), this is **more than fast enough**: the database queries that produce the data are usually far slower than rendering it. Measure your own templates with your own data before drawing conclusions - the cost depends mostly on the number of rows and on the functions you call per row.
 
@@ -279,7 +279,7 @@ echo "Total: " . (($end - $start) * 1000) . "ms\n";
 
 ### Is This Acceptable?
 
-**YES!** At roughly **64,000 CSV rows per second** on our machine, Tsuku is **perfectly suited for:**
+**YES!** At roughly **350,000 CSV rows per second** on our machine, Tsuku is **perfectly suited for:**
 - ✅ Batch data exports (CSV, XML, JSON)
 - ✅ Product feeds with tens of thousands of rows ([streaming](/guide/streaming))
 - ✅ Report generation pipelines

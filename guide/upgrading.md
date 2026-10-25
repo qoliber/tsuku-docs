@@ -256,6 +256,8 @@ These conditions did not throw in 1.3.0, but their results were wrong. They are 
 |----------|-------|-------|
 | `@if (x)yes@end` (space before the parenthesis) | `)yes` | `yes` |
 | `@for (items as i){i}@end` with items `[1, 2]` | `)1)2` | `12` |
+| `@unless (x)no@end` with `x` false | `)no` | `no` |
+| `@match(s)@case ("on")ON@end` with `s` = `on` | `)ON` | `ON` |
 | `@match (s)@case("a")A@end` | `ParseException` (Expected @case or @default) | `A` |
 | `@if("a>b" == label)match@end` with label `a>b` | nothing (the condition was split at `>`) | `match` |
 | `@replace(name, ")", "")` with name `Widget (XL)` | `", "")` | `Widget (XL` |
