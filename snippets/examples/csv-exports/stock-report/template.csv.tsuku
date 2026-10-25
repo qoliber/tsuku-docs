@@ -1,0 +1,12 @@
+sku,name,qty,reorder_level,status
+@for(items as item)
+@csv(item.sku),@csv(item.name),{item.qty},{item.reorder_level},@if(item.qty == 0 and not item.incoming_at)
+    out_of_stock
+@elseif(item.qty == 0)
+    incoming @date("Y-m-d", item.incoming_at)
+@elseif(item.qty <= item.reorder_level)
+    reorder
+@else
+    ok
+@end
+@end

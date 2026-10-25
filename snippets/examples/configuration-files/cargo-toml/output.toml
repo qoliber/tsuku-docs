@@ -1,0 +1,10 @@
+[package]
+name = "feed-worker"
+version = "0.4.2"
+edition = "2021"
+authors = ["Anna de Vries <anna@example.com>", "Jan Kowalski <jan@example.com>"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.40", features = ["rt-multi-thread", "macros"] }
+quick-xml = "0.36"

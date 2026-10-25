@@ -1,0 +1,10 @@
+@for(orders as order)
+Order #{order.increment_id}
+  @if(order.status == "complete")
+  Delivered on @date("j M", order.delivered_at)
+  @elseif(order.tracking)
+  On its way, tracking number {order.tracking}
+  @else
+  Being packed
+  @end
+@end

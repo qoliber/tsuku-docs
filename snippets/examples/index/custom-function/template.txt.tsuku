@@ -1,0 +1,3 @@
+@for(orders as order)
+#{order.increment_id}  @money(order.grand_total, order.currency)
+@end

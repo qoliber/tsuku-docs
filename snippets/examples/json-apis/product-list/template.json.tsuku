@@ -1,0 +1,21 @@
+{
+  "data": [@for(products as product, index)@if(index > 0),@end
+    {
+      "id": {product.id},
+      "sku": @json(product.sku),
+      "name": @json(product.name),
+      "price": {
+        "amount": @number(product.price, 2, ".", ""),
+        "currency": @json(currency)
+      },
+      "in_stock": @?{product.qty > 0 "true" : "false"},
+      "tags": [@for(product.tags as tag, t)@if(t > 0), @end@json(tag)@end]
+    }@end
+  ],
+  "meta": {
+    "page": {page.current},
+    "per_page": {page.size},
+    "total": {page.total},
+    "next":@if(page.current < page.last) @json(page.next_url)@else null@end
+  }
+}

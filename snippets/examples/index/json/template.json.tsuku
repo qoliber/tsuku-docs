@@ -1,0 +1,7 @@
+{
+  "id": {customer.id},
+  "name": @json(customer.name),
+  "email": @json(customer.email),
+  "newsletter": @?{customer.subscribed "true" : "false"},
+  "groups": [@for(customer.groups as group, index)@if(index > 0), @end@json(group)@end]
+}

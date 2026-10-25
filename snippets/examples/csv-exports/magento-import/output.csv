@@ -1,0 +1,3 @@
+sku,store_view_code,attribute_set_code,product_type,categories,product_websites,name,price,special_price,qty,is_in_stock,visibility,url_key,additional_attributes
+TEA-KYU-350,,Default,simple,"Default Category/Teaware/Teapots,Default Category/New",base,Kyusu Teapot 350 ml,49.00,,12,1,"Catalog, Search",kyusu-teapot-350-ml,"color=Red-brown,material=Tokoname clay"
+TEA-MAT-SET,,Default,simple,Default Category/Teaware/Matcha,base,Matcha Whisk & Bowl Set,39.90,29.90,0,1,"Catalog, Search",matcha-whisk-bowl-set,material=Bamboo

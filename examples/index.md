@@ -1,353 +1,195 @@
 # Examples
 
-Real-world examples showing how to use Tsuku for common data transformation tasks.
+Practical templates for the formats Tsuku is used for most: CSV and XML feeds, JSON responses, HTML fragments and emails, configuration files and e-commerce documents. Every example on these pages is real: the template, the data and the output are files, and the output is produced by running the template with Tsuku 1.4.
 
-## Overview
+## How the examples work
 
-Tsuku excels at transforming structured data (arrays, objects) into any text-based format. These examples demonstrate practical use cases you'll encounter in production applications.
+Each example has four tabs:
 
-## Available Examples
+| Tab | What it shows |
+|-----|---------------|
+| **Template** | The template file, `template.<format>.tsuku`, exactly as Tsuku reads it |
+| **Data** | `data.php`, which returns the `$data` array |
+| **Output** | What the template renders with that data - generated, never edited by hand |
+| **PHP** | The call: `echo $tsuku->process($template, $data);`, plus any function the example registers |
 
-### [CSV Exports →](/examples/csv-exports)
-
-Learn how to generate CSV files from your data:
-- Product catalogs with proper escaping
-- Order exports with line totals
-- Customer lists
-- Inventory reports with conditionals
-- Sales reports with totals
-- **[See complete examples in examples/07-csv-export.php](https://github.com/qoliber/tsuku/blob/main/examples/07-csv-export.php)**
-
-### [XML Generation →](/examples/xml-generation)
-
-Create XML feeds and documents:
-- Product feeds (Google Shopping, Facebook)
-- RSS/Atom feeds
-- XML Sitemaps
-- SOAP web services
-- API responses
-- **[See complete examples in examples/08-xml-export.php](https://github.com/qoliber/tsuku/blob/main/examples/08-xml-export.php)**
-
-### [YAML Configuration →](/examples/configuration-files)
-
-Generate YAML configuration files:
-- Application configuration
-- Docker Compose files
-- Kubernetes deployments
-- GitHub Actions workflows
-- OpenAPI specifications
-- **[See complete examples in examples/09-yaml-export.php](https://github.com/qoliber/tsuku/blob/main/examples/09-yaml-export.php)**
-
-### [HTML Generation →](/examples/html-generation)
-
-Build HTML from complex objects:
-- Product cards with ratings
-- User dashboards
-- Blog article lists
-- Checkout forms
-- Complex nested components
-- **[See complete examples in examples/10-html-generation.php](https://github.com/qoliber/tsuku/blob/main/examples/10-html-generation.php)**
-
-### [JSON APIs →](/examples/json-apis)
-
-Build JSON responses for APIs:
-- REST API responses
-- GraphQL-like structures
-- JSON-LD structured data
-- Webhook payloads
-- Error responses
-
-### [E-commerce →](/examples/ecommerce)
-
-E-commerce specific scenarios:
-- Invoice generation
-- Order confirmations
-- Product feeds
-- Email templates
-- Shipping labels
-
-## Quick Examples
-
-### Simple CSV Export
+Run one yourself with a script like this:
 
 ```php
+<?php
+
 use Qoliber\Tsuku\Tsuku;
+
+require 'vendor/autoload.php';
 
 $tsuku = new Tsuku();
+$template = file_get_contents('template.csv.tsuku'); // the Template tab
+$data = require 'data.php';                          // the Data tab
 
-$template = 'Name,Email,Status
-@for(users as user)
-@csv(user.name),@csv(user.email),{user.status}
-@end';
+echo $tsuku->process($template, $data);              // prints the Output tab
+```
 
-$data = [
-    'users' => [
-        ['name' => 'John Doe', 'email' => 'john@example.com', 'status' => 'active'],
-        ['name' => 'Jane Smith', 'email' => 'jane@example.com', 'status' => 'pending'],
-    ]
-];
+Dates are formatted in UTC. The sources of all examples are in [`snippets/examples`](https://github.com/qoliber/tsuku-docs/tree/main/snippets/examples) of the documentation repository; `scripts/render-examples.php` renders them, and the site is not published when an output no longer matches its template.
 
+## Example pages
+
+### [CSV Exports →](/examples/csv-exports)
+A product catalog with escaping and line continuation, a Magento import file, orders with line items, a stock report, optional columns, a semicolon-separated file and an export that is safe to open in Excel.
+
+### [XML Generation →](/examples/xml-generation)
+A Google Shopping feed, a sitemap with language alternates, an RSS feed with CDATA content, a SOAP request, an SVG chart and a feed streamed row by row.
+
+### [JSON APIs →](/examples/json-apis)
+A paginated product list, an order webhook, JSON-LD product data, a validation error response and a nested category tree.
+
+### [HTML Generation →](/examples/html-generation)
+A product grid, customer reviews, an order history table, an order confirmation email and a checkout form - each with a rendered preview.
+
+### [Configuration Files →](/examples/configuration-files)
+Application settings in YAML, Docker Compose, a Kubernetes deployment, a `.env` file, an nginx server block and a `Cargo.toml`.
+
+### [E-commerce →](/examples/ecommerce)
+A fixed-width invoice, a shipping label, a marketplace feed, an abandoned-cart email and a price list per customer group.
+
+## Quick examples
+
+### CSV export
+
+`@csv()` quotes a value only when it needs it: `Wholesale, EU` contains a comma. `@?{...}` turns a boolean into `yes` / `no`.
+
+::: code-group
+<<< @/snippets/examples/index/csv/template.csv.tsuku{tsuku} [Template]
+<<< @/snippets/examples/index/csv/data.php [Data]
+<<< @/snippets/examples/index/csv/output.csv [Output]
+```php [PHP]
 echo $tsuku->process($template, $data);
 ```
+:::
 
-**Output:**
-```csv
-Name,Email,Status
-John Doe,john@example.com,active
-Jane Smith,jane@example.com,pending
-```
+### XML product feed
 
-### XML Product Feed
+`@xml()` escapes the `&` in the product name. The `@match` starts after `<stock>` and its `@end` is followed by `</stock>`, so it is an *inline* block: the line breaks and indentation around each case are dropped and the value lands between the tags.
 
-```php
-$template = '<?xml version="1.0" encoding="UTF-8"?>
-<products>
-@for(products as product)
-    <product id="{product.id}">
-        <name>@xml(product.name)</name>
-        <price>@number(product.price, 2)</price>
-        <stock>@match(product.stock)
-            @case(0)
-                out_of_stock
-            @default
-                in_stock
-        @end</stock>
-    </product>
-@end
-</products>';
-
-$data = [
-    'products' => [
-        ['id' => 1, 'name' => 'Widget', 'price' => 29.99, 'stock' => 10],
-        ['id' => 2, 'name' => 'Gadget', 'price' => 49.99, 'stock' => 0],
-    ]
-];
-
+::: code-group
+<<< @/snippets/examples/index/xml/template.xml.tsuku{tsuku-xml} [Template]
+<<< @/snippets/examples/index/xml/data.php [Data]
+<<< @/snippets/examples/index/xml/output.xml [Output]
+```php [PHP]
 echo $tsuku->process($template, $data);
 ```
+:::
 
-**Output:**
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<products>
-    <product id="1">
-        <name>Widget</name>
-        <price>29.99</price>
-        <stock>in_stock</stock>
-    </product>
-    <product id="2">
-        <name>Gadget</name>
-        <price>49.99</price>
-        <stock>out_of_stock</stock>
-    </product>
-</products>
-```
+### JSON response
 
-Content comes before `@match` on its line (`<stock>`) and after its `@end` (`</stock>`), so the block is *inline*: the line breaks and indentation around each case body are dropped and the value renders as `<stock>in_stock</stock>`. Lines holding only directives (`@for`, `@case`, `@end`, ...) print nothing. See [Whitespace Control](/guide/whitespace-control).
+`@json()` prints a complete JSON string, quotes included, so it is not wrapped in `"..."`. The array uses a separator in front of every item except the first (`@if(index > 0), @end`), because JSON allows no trailing comma.
 
-### JSON API Response
-
-```php
-$template = '{
-    "success": true,
-    "data": {
-        "id": {user.id},
-        "name": @json(user.name),
-        "email": @json(user.email),
-        "role": @json(user.role)
-    }
-}';
-
-$data = [
-    'user' => [
-        'id' => 123,
-        'name' => 'John "The Developer" Doe',
-        'email' => 'john@example.com',
-        'role' => 'admin'
-    ]
-];
-
+::: code-group
+<<< @/snippets/examples/index/json/template.json.tsuku{tsuku-json} [Template]
+<<< @/snippets/examples/index/json/data.php [Data]
+<<< @/snippets/examples/index/json/output.json [Output]
+```php [PHP]
 echo $tsuku->process($template, $data);
 ```
+:::
 
-**Output:**
-```json
-{
-    "success": true,
-    "data": {
-        "id": 123,
-        "name": "John \u0022The Developer\u0022 Doe",
-        "email": "john@example.com",
-        "role": "admin"
-    }
-}
-```
+### Indented conditions
 
-`@json()` prints a complete JSON string, quotes included, so it is not wrapped in `"..."` in the template. Quotes, `<`, `>`, `&` and `'` inside the value are written as `\u0022`, `\u003C`, `\u003E`, `\u0026` and `\u0027` - valid JSON that decodes to the original text and is safe to embed in HTML.
+Lines that hold only directives print nothing - not even their indentation - so directives can be indented like the text they control. Each content line keeps its own indentation. See [Whitespace Control](/guide/whitespace-control).
 
-## Common Patterns
-
-### Conditional Output
-
-Directive lines can be indented like the content around them; they print nothing, not even their indentation:
-
-```php
-$template = '@for(orders as order)
-Order #{order.id}
-    @if(order.shipped)
-    Tracking: {order.tracking_number}
-    @else
-    Status: Processing
-    @end
-@end';
-
-$data = [
-    'orders' => [
-        ['id' => 1001, 'shipped' => true, 'tracking_number' => '1Z999AA10123456784'],
-        ['id' => 1002, 'shipped' => false],
-    ]
-];
-
+::: code-group
+<<< @/snippets/examples/index/conditions/template.txt.tsuku{tsuku} [Template]
+<<< @/snippets/examples/index/conditions/data.php [Data]
+<<< @/snippets/examples/index/conditions/output.txt [Output]
+```php [PHP]
 echo $tsuku->process($template, $data);
 ```
+:::
 
-**Output:**
-```text
-Order #1001
-    Tracking: 1Z999AA10123456784
-Order #1002
-    Status: Processing
-```
+### A registered function
 
-### Nested Data
+Formatting that the built-in functions do not cover goes into a PHP function registered under a name; the template calls it like any other function. See [Custom Functions](/guide/custom-functions).
 
-```php
-$template = '@for(categories as category)
-Category: {category.name}
-@for(category.products as product)
-  - {product.name}: ${product.price}
-@end
+::: code-group
+<<< @/snippets/examples/index/custom-function/template.txt.tsuku{tsuku} [Template]
+<<< @/snippets/examples/index/custom-function/data.php [Data]
+<<< @/snippets/examples/index/custom-function/output.txt [Output]
+<<< @/snippets/examples/index/custom-function/example.php [PHP]
+:::
 
-@end';
+## Using Tsuku in an application
 
-$data = [
-    'categories' => [
-        ['name' => 'Books', 'products' => [
-            ['name' => 'PHP Basics', 'price' => '29.99'],
-            ['name' => 'Clean Code', 'price' => '39.99'],
-        ]],
-        ['name' => 'Music', 'products' => [
-            ['name' => 'Jazz Classics', 'price' => '14.99'],
-        ]],
-    ]
-];
+Keep templates in files next to the code that fills them, and build plain arrays in PHP: the template only places values, it does not query anything.
 
-echo $tsuku->process($template, $data);
-```
-
-**Output:**
-```text
-Category: Books
-  - PHP Basics: $29.99
-  - Clean Code: $39.99
-
-Category: Music
-  - Jazz Classics: $14.99
-
-```
-
-### Custom Formatting
+### Magento 2
 
 ```php
-$tsuku->registerFunction('currency', function (float $amount, string $code = 'USD'): string {
-    return match ($code) {
-        'USD' => '$' . number_format($amount, 2),
-        'EUR' => '€' . number_format($amount, 2),
-        'GBP' => '£' . number_format($amount, 2),
-        default => $code . ' ' . number_format($amount, 2),
-    };
-});
-
-echo $tsuku->process('Total: @currency(total, "EUR")', ['total' => 1234.5]);
-// Output: Total: €1,234.50
-```
-
-## Integration Examples
-
-### Magento 2 Integration
-
-```php
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
 use Qoliber\Tsuku\Tsuku;
 
-class ProductExportController
+class ProductCsvExport
 {
     public function __construct(
         private readonly Tsuku $tsuku,
-        private readonly \Magento\Catalog\Model\ResourceModel\Product\CollectionFactory $productCollectionFactory
-    ) {}
+        private readonly CollectionFactory $productCollectionFactory,
+    ) {
+    }
 
-    public function execute(): void
+    public function export(): string
     {
         $collection = $this->productCollectionFactory->create()
-            ->addAttributeToSelect(['name', 'sku', 'price']);
+            ->addAttributeToSelect(['name', 'description', 'price'])
+            ->addAttributeToFilter('status', 1);
 
         $products = [];
         foreach ($collection as $product) {
             $products[] = [
                 'sku' => $product->getSku(),
                 'name' => $product->getName(),
-                'price' => $product->getPrice(),
+                'description' => $product->getDescription(),
+                'price' => (float) $product->getPrice(),
+                'qty' => (int) $product->getExtensionAttributes()->getStockItem()?->getQty(),
             ];
         }
 
-        $template = 'SKU,Name,Price
-@for(products as product)
-@csv(product.sku),@csv(product.name),@number(product.price, 2, ".", "")
-@end';
+        // the product catalog template from the CSV Exports page
+        $template = file_get_contents(__DIR__ . '/templates/products.csv.tsuku');
 
-        $csv = $this->tsuku->process($template, ['products' => $products]);
-
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="products.csv"');
-        echo $csv;
+        return $this->tsuku->process($template, ['products' => $products]);
     }
 }
 ```
 
-### Laravel Integration
+The template is the [product catalog](/examples/csv-exports#product-catalog) from the CSV page. For catalogs with many thousands of products, render with [`processToStream()`](/guide/streaming) instead.
+
+### Laravel
 
 ```php
+use Illuminate\Http\Response;
 use Qoliber\Tsuku\Tsuku;
 
-class OrderExportService
+class SitemapController
 {
-    public function __construct(private readonly Tsuku $tsuku) {}
-
-    public function exportToXml(Collection $orders): string
+    public function __invoke(Tsuku $tsuku): Response
     {
-        $template = '<?xml version="1.0"?>
-<orders>
-@for(orders as order)
-    <order id="{order.id}">
-        <customer>@xml(order.customer_name)</customer>
-        <total>@number(order.total, 2, ".", "")</total>
-        <status>{order.status}</status>
-    </order>
-@end
-</orders>';
+        $pages = Page::query()->where('published', true)->get()
+            ->map(fn (Page $page) => [
+                'loc' => url($page->path),
+                'updated_at' => $page->updated_at->getTimestamp(),
+                'alternates' => $page->translations->pluck('url', 'locale')->all(),
+            ])
+            ->all();
 
-        return $this->tsuku->process($template, [
-            'orders' => $orders->toArray()
-        ]);
+        $xml = $tsuku->process(file_get_contents(resource_path('feeds/sitemap.xml.tsuku')), ['pages' => $pages]);
+
+        return response($xml, 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 }
 ```
+
+The template is the [sitemap](/examples/xml-generation#sitemap-with-language-alternates) from the XML page.
 
 ## Next Steps
 
-Explore detailed examples for specific use cases:
-- [CSV Exports →](/examples/csv-exports)
-- [XML Generation →](/examples/xml-generation)
-- [JSON APIs →](/examples/json-apis)
-- [Configuration Files →](/examples/configuration-files)
-- [E-commerce →](/examples/ecommerce)
+- [Getting Started →](/guide/getting-started) - install Tsuku and render a first template
+- [Whitespace Control →](/guide/whitespace-control) - why indented templates render clean output
+- [Built-in Functions →](/guide/built-in-functions) - escaping, numbers, dates, lists

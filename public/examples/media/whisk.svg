@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Matcha whisk and bowl">
+  <rect width="320" height="240" fill="#e4eedc"/>
+  <ellipse cx="160" cy="206" rx="100" ry="10" fill="#d2e0c6"/>
+  <path d="M74 118 H246 Q240 196 160 198 Q80 196 74 118 Z" fill="#3d4a3a"/>
+  <ellipse cx="160" cy="118" rx="86" ry="14" fill="#56664f"/>
+  <ellipse cx="160" cy="118" rx="74" ry="9" fill="#8db255"/>
+  <rect x="212" y="40" width="16" height="58" rx="5" fill="#d8b878" transform="rotate(28 220 69)"/>
+  <path d="M224 82 Q214 108 196 112 M230 86 Q226 112 206 118 M236 90 Q238 114 218 122" stroke="#d8b878" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

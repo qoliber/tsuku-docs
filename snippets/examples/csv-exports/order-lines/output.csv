@@ -1,0 +1,4 @@
+order,date,customer,sku,qty,price,row_total
+000002203,2026-10-21,"de Vries, Anna",TEA-KYU-350,1,49.00,49.00
+,,,TEA-SEN-100,2,14.90,29.80
+000002204,2026-10-22,Jan Kowalski,TEA-MAT-SET,1,29.90,29.90

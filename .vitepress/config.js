@@ -1,6 +1,17 @@
+import { tsukuHostLanguages, tsukuLanguages } from './tsuku-grammar.js'
+
 export default {
   title: 'Tsuku',
   description: 'A lightweight PHP templating library for transforming data into ANY text format',
+
+  // vendor/ holds the Tsuku library that renders the examples (composer install) and snippets/ the
+  // example sources (scripts/render-examples.php); neither contains pages
+  srcExclude: ['vendor/**', 'snippets/**'],
+
+  markdown: {
+    // Template tabs use ```tsuku / ```tsuku-html / ... (see .vitepress/tsuku-grammar.js)
+    languages: [...tsukuHostLanguages, ...tsukuLanguages]
+  },
 
   themeConfig: {
     logo: '/logo.svg',

@@ -1,0 +1,7 @@
+{
+  "id": 4711,
+  "name": "Anna \u0022Annie\u0022 de Vries",
+  "email": "anna@example.com",
+  "newsletter": true,
+  "groups": ["Retail", "Tea Club"]
+}

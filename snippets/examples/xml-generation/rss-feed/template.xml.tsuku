@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>@xml(blog.title)</title>
+    <link>@xml(blog.url)</link>
+    <description>@xml(blog.description)</description>
+    <lastBuildDate>@date("r", blog.updated_at)</lastBuildDate>
+    @for(posts as post)
+    <item>
+      <title>@xml(post.title)</title>
+      <link>@xml(post.url)</link>
+      <guid isPermaLink="true">@xml(post.url)</guid>
+      <pubDate>@date("r", post.published_at)</pubDate>
+      @for(post.categories as category)
+      <category>@xml(category)</category>
+      @end
+      <description>@xml(post.excerpt)</description>
+      <content:encoded>@cdata{post.html}@end</content:encoded>
+    </item>
+    @end
+  </channel>
+</rss>

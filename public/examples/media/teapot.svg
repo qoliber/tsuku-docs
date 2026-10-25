@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-label="Clay teapot">
+  <rect width="320" height="240" fill="#f3e6d8"/>
+  <ellipse cx="160" cy="206" rx="92" ry="10" fill="#e3d2c0"/>
+  <path d="M96 130 L58 112 L62 104 L104 118 Z" fill="#9c4632"/>
+  <rect x="216" y="128" width="64" height="16" rx="8" fill="#9c4632" transform="rotate(-18 216 136)"/>
+  <ellipse cx="160" cy="150" rx="68" ry="56" fill="#b5543c"/>
+  <ellipse cx="160" cy="102" rx="44" ry="10" fill="#9c4632"/>
+  <ellipse cx="160" cy="98" rx="38" ry="8" fill="#c8664d"/>
+  <rect x="152" y="80" width="16" height="16" rx="6" fill="#9c4632"/>
+  <path d="M110 160 Q160 182 210 160" stroke="#c8664d" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>

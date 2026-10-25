@@ -1,0 +1,16 @@
+<section class="reviews">
+  <h2>Reviews (@length(reviews))</h2>
+  @for(reviews as review)
+  <article class="review">
+    <header>
+      <strong>@html(review.author)</strong>
+      <time datetime="@date("Y-m-d", review.created_at)">@date("j M Y", review.created_at)</time>
+      @if(review.verified)
+      <span class="badge">Verified buyer</span>
+      @end
+    </header>
+    <p class="stars" aria-label="{review.rating} out of 5">@html(review.stars)</p>
+    <p>@html(review.body)</p>
+  </article>
+  @end
+</section>

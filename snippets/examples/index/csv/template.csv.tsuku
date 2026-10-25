@@ -1,0 +1,4 @@
+email,firstname,lastname,group,newsletter
+@for(customers as customer)
+@csv(customer.email),@csv(customer.firstname),@csv(customer.lastname),@csv(customer.group),@?{customer.subscribed "yes" : "no"}
+@end

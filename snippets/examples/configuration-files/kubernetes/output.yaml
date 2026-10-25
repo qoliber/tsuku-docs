@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-web
+  labels:
+    app: shop-web
+    team: commerce
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: shop-web
+  template:
+    metadata:
+      labels:
+        app: shop-web
+    spec:
+      containers:
+        - name: php-fpm
+          image: "registry.example.com/shop/php-fpm:2026.10.3"
+          ports:
+            - containerPort: 9000
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: REDIS_HOST
+              value: "redis.internal"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 768Mi
+        - name: log-shipper
+          image: "fluent/fluent-bit:3.1"
+          env:
+            - name: FLB_LOG_LEVEL
+              value: "warn"

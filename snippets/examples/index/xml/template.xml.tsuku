@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<products>
+  @for(products as product)
+  <product sku="@xml(product.sku)">
+    <name>@xml(product.name)</name>
+    <price currency="EUR">@number(product.price, 2, ".", "")</price>
+    <stock>@match(product.qty)
+      @case(0)
+        out_of_stock
+      @default
+        in_stock
+    @end</stock>
+  </product>
+  @end
+</products>

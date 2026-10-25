@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {app.name}
+  labels:
+    @for(app.labels as value, key)
+    {key}: {value}
+    @end
+spec:
+  replicas: {app.replicas}
+  selector:
+    matchLabels:
+      app: {app.name}
+  template:
+    metadata:
+      labels:
+        app: {app.name}
+    spec:
+      containers:
+        @for(app.containers as container)
+        - name: {container.name}
+          image: "{container.image}:{container.tag}"
+          @if(container.port)
+          ports:
+            - containerPort: {container.port}
+          @end
+          env:
+            @for(container.env as value, name)
+            - name: {name}
+              value: @json(value)
+            @end
+          @if(container.resources)
+          resources:
+            limits:
+              cpu: {container.resources.cpu}
+              memory: {container.resources.memory}
+          @end
+        @end

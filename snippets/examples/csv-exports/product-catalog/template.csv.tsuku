@@ -1,0 +1,5 @@
+sku,name,description,price,qty
+@for(products as product)
+@csv(product.sku),@csv(product.name),@csv(product.description),\
+@number(product.price, 2, ".", ""),{product.qty}
+@end

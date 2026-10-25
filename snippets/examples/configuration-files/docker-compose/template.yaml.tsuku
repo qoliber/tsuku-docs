@@ -1,0 +1,38 @@
+services:
+  @for(services as service)
+  {service.name}:
+    @if(service.build)
+    build: {service.build}
+    @else
+    image: {service.image}
+    @end
+    @if(service.ports)
+    ports:
+      @for(service.ports as port)
+      - "{port}"
+      @end
+    @end
+    @if(service.environment)
+    environment:
+      @for(service.environment as value, key)
+      {key}: @json(value)
+      @end
+    @end
+    @if(service.volumes)
+    volumes:
+      @for(service.volumes as volume)
+      - {volume}
+      @end
+    @end
+    @if(service.depends_on)
+    depends_on:
+      @for(service.depends_on as dependency)
+      - {dependency}
+      @end
+    @end
+  @end
+
+volumes:
+  @for(volumes as volume)
+  {volume}:
+  @end

@@ -1,0 +1,4 @@
+sku	title	brand	ean	price	quantity	condition	main_image_url	bullet_point_1	bullet_point_2
+@for(products as product)
+@tsv(product.sku)	@tsv(product.name)	@tsv(product.brand)	{product.ean}	@number(product.price, 2, ".", "")	{product.qty}	new	@tsv(product.image)	@tsv(product.bullets.0)	@tsv(product.bullets.1)
+@end

@@ -1,0 +1,12 @@
+{
+  "categories": [@for(categories as category, i)@if(i > 0),@end
+    {
+      "id": {category.id},
+      "name": @json(category.name),
+      "url": @json(category.url),
+      "children": [@for(category.children as child, j)@if(j > 0),@end
+        {"id": {child.id}, "name": @json(child.name), "product_count": {child.product_count}}@end
+      ]
+    }@end
+  ]
+}

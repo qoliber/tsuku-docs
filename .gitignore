@@ -7,6 +7,9 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+# PHP (composer install; composer.lock is committed so CI renders with the same Tsuku version)
+vendor/
+
 # VitePress
 .vitepress/cache/
 .vitepress/dist/

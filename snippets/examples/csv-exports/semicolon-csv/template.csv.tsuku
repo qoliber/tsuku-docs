@@ -1,0 +1,4 @@
+Artikelnummer;Bezeichnung;Preis;Bestand
+@for(products as product)
+@ssv(product.sku);@ssv(product.name);@number(product.price, 2, ",", ".");{product.qty}
+@end

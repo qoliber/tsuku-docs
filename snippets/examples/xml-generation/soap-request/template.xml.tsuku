@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:erp="urn:example:erp:orders">
+  <soap:Body>
+    <erp:CreateSalesOrder>
+      <erp:OrderNumber>@xml(order.increment_id)</erp:OrderNumber>
+      <erp:OrderDate>@date("c", order.created_at)</erp:OrderDate>
+      <erp:Customer number="@xml(order.customer.number)">
+        <erp:Name>@xml(order.customer.name)</erp:Name>
+        <erp:Email>@xml(order.customer.email)</erp:Email>
+      </erp:Customer>
+      <erp:Lines>
+        @for(order.items as item, line)
+        <erp:Line number="{line}">
+          <erp:Sku>@xml(item.sku)</erp:Sku>
+          <erp:Quantity>{item.qty}</erp:Quantity>
+          <erp:UnitPrice currency="EUR">@number(item.price, 2, ".", "")</erp:UnitPrice>
+        </erp:Line>
+        @end
+      </erp:Lines>
+      @if(order.comment)
+      <erp:Remarks>@xml(order.comment)</erp:Remarks>
+      @end
+    </erp:CreateSalesOrder>
+  </soap:Body>
+</soap:Envelope>

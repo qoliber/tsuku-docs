@@ -1,0 +1,24 @@
+<form class="checkout" method="post" action="@html(form.action)">
+  <input type="hidden" name="form_key" value="@html(form.key)">
+  @for(form.fields as field)
+  <div class="field">
+    <label for="@html(field.name)">@html(field.label)@if(field.required) <span class="required">*</span>@end</label>
+    @match(field.type)
+    @case("text", "email", "tel")
+    <input type="@html(field.type)" id="@html(field.name)" name="@html(field.name)" value="@html(field.value)" autocomplete="@html(field.autocomplete)"@if(field.required) required@end>
+    @case("select")
+    <select id="@html(field.name)" name="@html(field.name)"@if(field.required) required@end>
+      @for(field.options as option)
+      <option value="@html(option.value)"@if(option.value == field.value) selected@end>@html(option.label)</option>
+      @end
+    </select>
+    @case("textarea")
+    <textarea id="@html(field.name)" name="@html(field.name)" rows="2">@html(field.value)</textarea>
+    @end
+    @if(field.hint)
+    <small>@html(field.hint)</small>
+    @end
+  </div>
+  @end
+  <button type="submit" class="btn">Continue to payment</button>
+</form>

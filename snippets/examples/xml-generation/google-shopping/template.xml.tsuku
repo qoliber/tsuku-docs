@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>@xml(store.name)</title>
+    <link>@xml(store.url)</link>
+    <description>@xml(store.description)</description>
+    @for(products as product)
+    <item>
+      <g:id>@xml(product.sku)</g:id>
+      <g:title>@xml(product.name)</g:title>
+      <g:description>@xml(product.description)</g:description>
+      <g:link>@xml(product.url)</g:link>
+      <g:image_link>@xml(product.image)</g:image_link>
+      @for(product.gallery as image)
+      <g:additional_image_link>@xml(image)</g:additional_image_link>
+      @end
+      <g:availability>@if(product.qty > 0)
+        in_stock
+      @elseif(product.backorders)
+        backorder
+      @else
+        out_of_stock
+      @end</g:availability>
+      <g:price>@number(product.price, 2, ".", "") {store.currency}</g:price>
+      @if(product.special_price and product.special_price < product.price)
+      <g:sale_price>@number(product.special_price, 2, ".", "") {store.currency}</g:sale_price>
+      @end
+      <g:brand>@xml(product.brand)</g:brand>
+      @if(product.gtin)
+      <g:gtin>@xml(product.gtin)</g:gtin>
+      @else
+      <g:mpn>@xml(product.sku)</g:mpn>
+      @end
+      <g:condition>new</g:condition>
+      <g:product_type>@xml(@join(product.categories, " > "))</g:product_type>
+      <g:shipping_weight>@number(product.weight, 2, ".", "") kg</g:shipping_weight>
+    </item>
+    @end
+  </channel>
+</rss>

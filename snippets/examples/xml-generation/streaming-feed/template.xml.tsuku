@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog store="@xml(store.code)" currency="@xml(store.currency)">
+  @for(products as product)
+  <product sku="@xml(product.sku)">
+    <name>@xml(product.name)</name>
+    <price>@number(product.price, 2, ".", "")</price>
+    <qty>{product.qty}</qty>
+  </product>
+  @end
+</catalog>

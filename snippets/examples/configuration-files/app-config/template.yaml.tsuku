@@ -1,0 +1,33 @@
+app:
+  name: @json(app.name)
+  env: {app.env}
+  debug: @?{app.debug "true" : "false"}
+  url: {app.url}
+
+database:
+  host: {db.host}
+  port: {db.port}
+  name: {db.name}
+  user: {db.user}
+  password: @json(db.password)
+
+cache:
+  @if(cache.driver == "redis")
+  driver: redis
+  host: {cache.host}
+  port: {cache.port}
+  @else
+  driver: file
+  path: {cache.path}
+  @end
+
+queues:
+  @for(queues as queue)
+  - name: {queue.name}
+    workers: {queue.workers}
+    @if(queue.retry)
+    retry:
+      attempts: {queue.retry.attempts}
+      backoff: {queue.retry.backoff}s
+    @end
+  @end

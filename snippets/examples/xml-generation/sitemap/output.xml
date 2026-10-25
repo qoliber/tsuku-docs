@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://shop.example.com/en/teapots</loc>
+    <lastmod>2026-10-20</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shop.example.com/en/teapots"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://shop.example.com/de/teekannen"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://shop.example.com/nl/theepotten"/>
+  </url>
+  <url>
+    <loc>https://shop.example.com/en/teapots?page=2&amp;limit=24</loc>
+    <lastmod>2026-10-18</lastmod>
+  </url>
+</urlset>

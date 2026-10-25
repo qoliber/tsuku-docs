@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>Kumo Tea</title>
+    <link>https://shop.example.com</link>
+    <description>Japanese tea &amp; teaware</description>
+    <item>
+      <g:id>TEA-KYU-350</g:id>
+      <g:title>Kyusu Teapot 350 ml</g:title>
+      <g:description>Tokoname clay teapot with a fine &lt;mesh&gt; filter.</g:description>
+      <g:link>https://shop.example.com/kyusu-teapot-350-ml</g:link>
+      <g:image_link>https://shop.example.com/media/catalog/product/k/y/kyusu-350.jpg</g:image_link>
+      <g:additional_image_link>https://shop.example.com/media/catalog/product/k/y/kyusu-350-side.jpg</g:additional_image_link>
+      <g:additional_image_link>https://shop.example.com/media/catalog/product/k/y/kyusu-350-lid.jpg</g:additional_image_link>
+      <g:availability>in_stock</g:availability>
+      <g:price>49.00 EUR</g:price>
+      <g:brand>Gyokko</g:brand>
+      <g:gtin>4901234567894</g:gtin>
+      <g:condition>new</g:condition>
+      <g:product_type>Teaware &gt; Teapots</g:product_type>
+      <g:shipping_weight>0.42 kg</g:shipping_weight>
+    </item>
+    <item>
+      <g:id>TEA-MAT-SET</g:id>
+      <g:title>Matcha Whisk &amp; Bowl Set</g:title>
+      <g:description>Bamboo chasen (100 tines), chawan and scoop.</g:description>
+      <g:link>https://shop.example.com/matcha-whisk-bowl-set</g:link>
+      <g:image_link>https://shop.example.com/media/catalog/product/m/a/matcha-set.jpg</g:image_link>
+      <g:availability>backorder</g:availability>
+      <g:price>39.90 EUR</g:price>
+      <g:sale_price>29.90 EUR</g:sale_price>
+      <g:brand>Kumo Tea</g:brand>
+      <g:mpn>TEA-MAT-SET</g:mpn>
+      <g:condition>new</g:condition>
+      <g:product_type>Teaware &gt; Matcha</g:product_type>
+      <g:shipping_weight>0.65 kg</g:shipping_weight>
+    </item>
+  </channel>
+</rss>

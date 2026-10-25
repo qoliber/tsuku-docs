@@ -1,0 +1,7 @@
+sku,name,unit,price,min_qty
+@for(products as product)
+@if(customer.group_id in @split(product.customer_groups)
+    and product.status == "active")
+@csv(product.sku),@csv(product.name),@csv(product.unit),@number(product.price, 2, ".", ""),{product.min_qty}
+@end
+@end

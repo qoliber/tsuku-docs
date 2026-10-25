@@ -1,0 +1,36 @@
+<section class="product-grid" aria-label="@html(category.name)">
+  @for(products as product)
+  <article class="product-card" aria-labelledby="product-{product.id}">
+    @if("new" in product.labels)
+    <span class="badge badge-new">New</span>
+    @elseif(product.special_price and product.special_price < product.price)
+    <span class="badge badge-sale">Sale</span>
+    @elseif("bestseller" in product.labels)
+    <span class="badge">Bestseller</span>
+    @end
+    <a href="@html(product.url)">
+      <img src="@html(product.image)" alt="@html(product.name)" width="320" height="240">
+    </a>
+    <h3 id="product-{product.id}"><a href="@html(product.url)">@html(product.name)</a></h3>
+    <p class="rating" aria-label="Rated @number(product.rating, 1) out of 5">
+      @for(product.stars as filled)
+      <span class="star @?{filled "filled" : "empty"}" aria-hidden="true">★</span>
+      @end
+      <span class="count">({product.review_count})</span>
+    </p>
+    <p class="price">
+      @if(product.special_price and product.special_price < product.price)
+      <del>€@number(product.price, 2)</del>
+      <ins>€@number(product.special_price, 2)</ins>
+      @else
+      €@number(product.price, 2)
+      @end
+    </p>
+    @if(product.qty > 0)
+    <button type="button" class="btn">Add to cart</button>
+    @else
+    <button type="button" class="btn" disabled>Out of stock</button>
+    @end
+  </article>
+  @end
+</section>

@@ -1,0 +1,5 @@
+sku,name,qty,reorder_level,status
+TEA-KYU-350,Kyusu Teapot 350 ml,12,5,ok
+TEA-SEN-100,Sencha Asamushi 100 g,18,40,reorder
+TEA-MAT-SET,Matcha Whisk & Bowl Set,0,5,incoming 2026-11-04
+TEA-TET-080,"Cast Iron Kettle ""Tetsubin"" 0.8 l",0,2,out_of_stock

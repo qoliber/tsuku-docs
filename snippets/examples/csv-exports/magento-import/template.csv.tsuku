@@ -1,0 +1,7 @@
+sku,store_view_code,attribute_set_code,product_type,categories,product_websites,name,price,special_price,qty,is_in_stock,visibility,url_key,additional_attributes
+@for(products as product)
+@csv(product.sku),,Default,simple,@csv(@join(product.categories, ",")),base,@csv(product.name),\
+@number(product.price, 2, ".", ""),@if(product.special_price)@number(product.special_price, 2, ".", "")@end,\
+@number(product.qty, 0, ".", ""),@?{product.qty > 0 or product.backorders "1" : "0"},\
+"Catalog, Search",@csv(product.url_key),@csv(@join(product.attributes, ","))
+@end

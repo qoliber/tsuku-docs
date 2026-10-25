@@ -1,0 +1,14 @@
+[package]
+name = "{package.name}"
+version = "{package.version}"
+edition = "2021"
+authors = [@for(package.authors as author, index)@if(index > 0), @end"{author}"@end]
+
+[dependencies]
+@for(dependencies as dependency)
+@if(dependency.features)
+{dependency.name} = { version = "{dependency.version}", features = [@for(dependency.features as feature, index)@if(index > 0), @end"{feature}"@end] }
+@else
+{dependency.name} = "{dependency.version}"
+@end
+@end

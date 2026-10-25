@@ -1,0 +1,4 @@
+submitted,email,name,message
+@for(messages as message)
+@date("Y-m-d H:i", message.submitted_at),@csv_safe(message.email),@csv_safe(message.name),@csv_safe(message.message)
+@end

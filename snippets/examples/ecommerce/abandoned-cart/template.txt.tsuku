@@ -1,0 +1,21 @@
+Hi {customer.firstname},
+
+you left these in your basket:
+
+@for(cart.items as item)
+  {item.qty} x {item.name} (€@number(item.row_total, 2))
+@end
+
+Basket total: €@number(cart.subtotal, 2)
+@if(coupon and cart.subtotal >= coupon.min_subtotal)
+
+Order before @date("l, j F", coupon.expires_at) and use the code {coupon.code} for @number(coupon.percent, 0)% off.
+@elseif(coupon)
+
+Add €@number(coupon.missing, 2) more and use the code {coupon.code} for @number(coupon.percent, 0)% off.
+@end
+
+Continue where you left off:
+{cart.url}
+
+Kumo Tea

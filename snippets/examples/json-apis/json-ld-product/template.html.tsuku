@@ -1,0 +1,33 @@
+<script type="application/ld+json">
+{
+  "@@context": "https://schema.org",
+  "@@type": "Product",
+  "sku": @json(product.sku),
+  "name": @json(product.name),
+  "description": @json(product.description),
+  "image": [@for(product.images as image, index)@if(index > 0), @end@json(image)@end],
+  "brand": {
+    "@@type": "Brand",
+    "name": @json(product.brand)
+  },
+  "offers": {
+    "@@type": "Offer",
+    "url": @json(product.url),
+    "price": @number(product.final_price, 2, ".", ""),
+    "priceCurrency": @json(currency),
+    "availability": @if(product.qty > 0)
+      "https://schema.org/InStock"
+    @elseif(product.backorders)
+      "https://schema.org/BackOrder"
+    @else
+      "https://schema.org/OutOfStock"
+    @end,
+    "itemCondition": "https://schema.org/NewCondition"
+  }@if(product.review_count > 0),
+  "aggregateRating": {
+    "@@type": "AggregateRating",
+    "ratingValue": @number(product.rating, 1, ".", ""),
+    "reviewCount": {product.review_count}
+  }@end
+}
+</script>

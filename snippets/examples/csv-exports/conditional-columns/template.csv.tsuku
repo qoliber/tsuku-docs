@@ -1,0 +1,4 @@
+sku,name,price@if(include_cost),cost,margin@end
+@for(products as product)
+@csv(product.sku),@csv(product.name),@number(product.price, 2, ".", "")@if(include_cost),@number(product.cost, 2, ".", ""),@number(product.margin, 1, ".", "")%@end
+@end

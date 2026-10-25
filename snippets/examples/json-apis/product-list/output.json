@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "id": 101,
+      "sku": "TEA-KYU-350",
+      "name": "Kyusu Teapot 350 ml",
+      "price": {
+        "amount": 49.00,
+        "currency": "EUR"
+      },
+      "in_stock": true,
+      "tags": ["teapot", "clay"]
+    },
+    {
+      "id": 103,
+      "sku": "TEA-TET-080",
+      "name": "Cast Iron Kettle \u0022Tetsubin\u0022 0.8 l",
+      "price": {
+        "amount": 89.00,
+        "currency": "EUR"
+      },
+      "in_stock": false,
+      "tags": []
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "per_page": 2,
+    "total": 5,
+    "next": "\/api\/products?page=2\u0026per_page=2"
+  }
+}

@@ -1,0 +1,13 @@
+{
+    "name": "qoliber/tsuku-docs",
+    "description": "Renders the example outputs of the Tsuku documentation (scripts/render-examples.php).",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.1",
+        "qoliber/tsuku": "^1.4"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

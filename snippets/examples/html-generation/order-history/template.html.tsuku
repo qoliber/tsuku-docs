@@ -1,0 +1,32 @@
+<table class="orders">
+  <caption>Recent orders</caption>
+  <thead>
+    <tr>
+      <th scope="col">Order</th>
+      <th scope="col">Date</th>
+      <th scope="col">Total</th>
+      <th scope="col">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    @for(orders as order)
+    <tr>
+      <td><a href="/sales/order/view/order_id/{order.id}">#@html(order.increment_id)</a></td>
+      <td><time datetime="@date("Y-m-d", order.created_at)">@date("j M Y", order.created_at)</time></td>
+      <td>€@number(order.grand_total, 2)</td>
+      <td>
+        @match(order.status)
+        @case("complete")
+        <span class="status status-ok">Delivered</span>
+        @case("pending", "processing")
+        <span class="status status-busy">Processing</span>
+        @case("canceled")
+        <span class="status status-off">Cancelled</span>
+        @default
+        <span class="status">@html(order.status_label)</span>
+        @end
+      </td>
+    </tr>
+    @end
+  </tbody>
+</table>

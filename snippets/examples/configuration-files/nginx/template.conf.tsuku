@@ -1,0 +1,30 @@
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name @join(site.domains, " ");
+    root {site.root};
+
+    ssl_certificate     /etc/letsencrypt/live/@first(site.domains)/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/@first(site.domains)/privkey.pem;
+    @unless(site.production)
+
+    auth_basic "Staging";
+    auth_basic_user_file /etc/nginx/htpasswd/{site.name};
+    @end
+
+    @for(site.redirects as redirect)
+    location = {redirect.from} {
+        return 301 {redirect.to};
+    }
+
+    @end
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass unix:/run/php/php{site.php}-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}

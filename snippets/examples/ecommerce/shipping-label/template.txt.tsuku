@@ -1,0 +1,22 @@
+FROM  @upper(sender.name)
+      @upper(sender.street)
+      @upper(sender.postcode) @upper(sender.city)
+      @upper(sender.country)
+
+TO    @upper(recipient.name)
+      @if(recipient.company)
+      @upper(recipient.company)
+      @end
+      @upper(recipient.street)
+      @upper(recipient.postcode) @upper(recipient.city)
+      @upper(recipient.country)
+
+@match(shipment.service)
+@case("express")
+*** EXPRESS - DELIVER BEFORE 12:00 ***
+@case("saturday")
+*** SATURDAY DELIVERY ***
+@end
+TRACKING  {shipment.tracking}
+WEIGHT    @number(shipment.weight, 2) kg
+ORDER     #{order.increment_id}

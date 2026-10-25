@@ -1,0 +1,7 @@
+order,date,customer,sku,qty,price,row_total
+@for(orders as order)
+@for(order.items as item, index)
+@if(index == 0){order.increment_id},@date("Y-m-d", order.created_at),@csv(order.customer)@else,,@end,\
+@csv(item.sku),{item.qty},@number(item.price, 2, ".", ""),@number(item.row_total, 2, ".", "")
+@end
+@end

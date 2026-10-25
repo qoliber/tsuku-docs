@@ -1,0 +1,27 @@
+{
+  "event": "order.created",
+  "id": @json(event.id),
+  "created_at": @json(@date("c", event.created_at)),
+  "data": {
+    "number": @json(order.increment_id),
+    "status": @json(order.status),
+    "currency": @json(order.currency),
+    "grand_total": @number(order.grand_total, 2, ".", ""),
+    "customer": {
+      "email": @json(order.customer.email),
+      "name": @json(order.customer.name),
+      "is_guest": @?{not order.customer.id "true" : "false"}
+    },
+    "items": [@for(order.items as item, index)@if(index > 0),@end
+      {
+        "sku": @json(item.sku),
+        "qty": {item.qty},
+        "row_total": @number(item.row_total, 2, ".", "")
+      }@end
+    ],
+    "shipment":@if(order.shipment) {
+      "carrier": @json(order.shipment.carrier),
+      "tracking_number": @json(order.shipment.tracking)
+    }@else null@end
+  }
+}

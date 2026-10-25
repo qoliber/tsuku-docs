@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<products>
+  <product sku="TEA-KYU-350">
+    <name>Kyusu Teapot 350 ml</name>
+    <price currency="EUR">49.00</price>
+    <stock>in_stock</stock>
+  </product>
+  <product sku="TEA-MAT-SET">
+    <name>Matcha Whisk &amp; Bowl Set</name>
+    <price currency="EUR">29.90</price>
+    <stock>out_of_stock</stock>
+  </product>
+</products>

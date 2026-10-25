@@ -1,0 +1,27 @@
+@pad(@concat("INVOICE ", invoice.number), 49)@pad(@date("j F Y", invoice.date), 20, "right")
+
+{seller.name}, {seller.street}, {seller.postcode} {seller.city}
+VAT {seller.vat_id}
+
+Bill to:
+{invoice.customer.company}
+{invoice.customer.street}
+{invoice.customer.postcode} {invoice.customer.city}
+VAT {invoice.customer.vat_id}
+
+@pad("SKU", 14)@pad("Description", 28)@pad("Qty", 5, "right")@pad("Price", 11, "right")@pad("Total", 11, "right")
+---------------------------------------------------------------------
+@for(invoice.items as item)
+@pad(item.sku, 14)@pad(item.name, 28)@pad(item.qty, 5, "right")@pad(@number(item.price, 2), 11, "right")@pad(@number(item.row_total, 2), 11, "right")
+@end
+---------------------------------------------------------------------
+@pad("Subtotal", 58, "right")@pad(@number(invoice.subtotal, 2), 11, "right")
+@pad(@concat("VAT ", invoice.vat_rate, "%"), 58, "right")@pad(@number(invoice.vat, 2), 11, "right")
+@pad("Total EUR", 58, "right")@pad(@number(invoice.total, 2), 11, "right")
+
+@if(invoice.paid_at)
+Paid on @date("j F Y", invoice.paid_at). Thank you!
+@else
+Please transfer EUR @number(invoice.total, 2) by @date("j F Y", invoice.due_date)
+to {seller.iban}, reference {invoice.number}.
+@end

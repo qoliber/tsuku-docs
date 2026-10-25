@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog store="nl_en" currency="EUR">
+  <product sku="TEA-KYU-350">
+    <name>Kyusu Teapot 350 ml</name>
+    <price>49.00</price>
+    <qty>12</qty>
+  </product>
+  <product sku="TEA-SEN-100">
+    <name>Sencha Asamushi 100 g</name>
+    <price>14.90</price>
+    <qty>140</qty>
+  </product>
+  <product sku="TEA-TET-080">
+    <name>Cast Iron Kettle &quot;Tetsubin&quot; 0.8 l</name>
+    <price>89.00</price>
+    <qty>0</qty>
+  </product>
+</catalog>

@@ -1,0 +1,13 @@
+{
+  "type": "https://shop.example.com/problems/validation",
+  "title": @json(problem.title),
+  "status": {problem.status},
+  "detail": @json(problem.detail),
+  "instance": @json(problem.instance),
+  "invalid_params": [@for(problem.invalid_params as param, index)@if(index > 0),@end
+    {
+      "name": @json(param.name),
+      "reason": @json(param.reason)
+    }@end
+  ]
+}
