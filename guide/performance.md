@@ -241,7 +241,7 @@ $tsuku = new Tsuku(StrictnessMode::WARNING);
 $tsuku = new Tsuku(StrictnessMode::STRICT);
 ```
 
-For templates that find all their data, the three modes render at the same speed, so choose the mode for correctness, not speed: `STRICT` in tests and CI, `WARNING` while developing (log `getWarnings()`), `SILENT` or `WARNING` in production. Set the mode in the constructor if you need `getWarnings()` - a mode passed as the third argument of `process()` does not record warnings on the instance. See [Strictness Modes & Errors](/guide/strictness).
+For templates that find all their data, the three modes render at the same speed, so choose the mode for correctness, not speed: `STRICT` in tests and CI, `WARNING` while developing (log `getWarnings()`), `SILENT` or `WARNING` in production. `getWarnings()` returns the warnings of the last call, whether its mode was set in the constructor or passed as the third argument of `process()`. See [Strictness Modes & Errors](/guide/strictness).
 
 ### 6. Profile Before Optimizing
 

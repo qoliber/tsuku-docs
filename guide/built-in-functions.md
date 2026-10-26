@@ -343,7 +343,7 @@ $data = ['search' => 'foo bar'];
 
 ### @csv()
 
-CSV-safe escaping with quotes. A value is quoted (and its `"` doubled) only when it contains a comma, a double quote or a line break:
+CSV-safe escaping with quotes. A value is quoted (and its `"` doubled) only when it contains a comma, a double quote or a line break (`\n` or `\r`; up to 1.4.1 a bare `\r` was left unquoted, and CSV readers that end a record at `\r` split the value):
 
 ```php
 $template = '@csv(text)';

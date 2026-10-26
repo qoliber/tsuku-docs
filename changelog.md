@@ -11,6 +11,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 :::
 
+## [1.4.2] - 2026-10-26
+
+Bug fixes. Three of them can change output - see [Upgrading to 1.4.2](/guide/upgrading#upgrading-to-1-4-2).
+
+### Fixed
+- **`@csv()` quotes a value holding a bare carriage return**, as it quotes one holding a comma, a quote or a line feed. `alpha\rbeta` was printed unquoted, and CSV readers that end a record at `\r` read it as two records. `@escape(value, "csv")` is the same function. See [@csv()](/guide/built-in-functions#csv).
+- **A quoted string can span lines.** A function argument written as a string with a line break inside printed nothing, in `STRICT` mode as well: the line break kept it from being recognised as a string, so it was looked up as a variable that did not exist. The same applied to custom directive arguments and to the values of `@?{...}`. The line breaks are now part of the string. Strings in conditions and `@case` values already allowed them.
+- **`WARNING` mode keeps at most 1,000 warnings per call**, so `processToStream()` stays within bounded memory when every row raises a warning. A 100,000-row export with a missing variable kept 100,000 messages (about 10 MB); it now keeps the first 1,000 (under 1 MB). The new `getWarningCount()` (on `Tsuku` and `ProcessingContext`) counts every warning of the last call, also those that were not kept. The limit is `ProcessingContext::WARNING_LIMIT`. See [Warnings](/guide/strictness#warnings).
+
+### Upgrade notes
+- `getWarnings()` returns at most 1,000 warnings. Read `getWarningCount()` for the total; `hasWarnings()` is unchanged.
+- A CSV value holding a carriage return is now enclosed in quotes.
+- A quoted function or directive argument, or `@?{...}` value, that spans lines now prints its text instead of nothing.
+
+### Tests
+- 960 tests (1.4.1: 944), line coverage 99.4%, mutation score 98.8%; PHPStan max and PSR-12 clean on PHP 8.1-8.5.
+
 ## [1.4.1] - 2026-10-25
 
 Bug fixes. Four of them can change output or raise an exception where 1.4.0 did not - see [Upgrading to 1.4.1](/guide/upgrading#upgrading-to-1-4-1).

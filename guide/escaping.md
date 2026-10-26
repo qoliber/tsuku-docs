@@ -183,7 +183,7 @@ $data = ['text' => 'Say "hi"'];
 // Output: Say hi
 ```
 
-The same holds for strings in conditions, `@?{...}` values and `@match` / `@case` values. Every other backslash stays part of the value: `"C:\temp"` is `C:\temp`, and `\'` inside double quotes is the two characters `\'`. Up to 1.4.0 the backslash of `\"` stayed in the value too, so the second template searched for the two characters `\"` and printed `Say "hi"`.
+The same holds for strings in conditions, `@?{...}` values and `@match` / `@case` values. A string may also span lines: its line breaks are part of the value (up to 1.4.1 a function argument or `@?{...}` value that did printed nothing). Every other backslash stays part of the value: `"C:\temp"` is `C:\temp`, and `\'` inside double quotes is the two characters `\'`. Up to 1.4.0 the backslash of `\"` stayed in the value too, so the second template searched for the two characters `\"` and printed `Say "hi"`.
 
 ### Apostrophes in Text
 

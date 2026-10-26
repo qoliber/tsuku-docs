@@ -33,6 +33,7 @@ class Tsuku
 
     public function getWarnings(): array;
     public function hasWarnings(): bool;
+    public function getWarningCount(): int;
 
     public function registerFunction(string $name, callable $handler): self;
     public function registerDirective(string $name, callable $handler): self;
@@ -183,11 +184,12 @@ See [Streaming Large Datasets](/guide/streaming) for generators, files and the c
 ### `getWarnings()` / `hasWarnings()`
 
 ```php
-public function getWarnings(): array   // list of warning messages
+public function getWarnings(): array   // list of warning messages, the first 1,000
 public function hasWarnings(): bool
+public function getWarningCount(): int // every warning, also those not kept (since 1.4.2)
 ```
 
-In `WARNING` mode, missing variables, unknown functions and function/directive errors are recorded instead of thrown. The list is cleared at the start of every `process()` / `processToStream()` call.
+In `WARNING` mode, missing variables, unknown functions and function/directive errors are recorded instead of thrown. The list is cleared at the start of every `process()` / `processToStream()` call. It keeps the first 1,000 warnings of a call (`ProcessingContext::WARNING_LIMIT`), so streaming stays within bounded memory; `getWarningCount()` counts all of them.
 
 ```php
 use Qoliber\Tsuku\Tsuku;

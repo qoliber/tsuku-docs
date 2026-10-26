@@ -97,6 +97,8 @@ GAD-002,"Gadget, Premium",1299.50,50
 
 **1.4.1** is a bug-fix release: warnings of a per-call strictness mode can be read, functions that throw inside conditions follow the strictness mode, `@substr()` and friends accept numbers from the data, `\"` is a quote inside a quoted string, uncallable function names are refused when registered, and `registerFormatter()` works. See [Upgrading to 1.4.1](/guide/upgrading#upgrading-to-1-4-1).
 
+**1.4.2** fixes three more: `@csv()` quotes a value holding a carriage return, a quoted function argument or `@?{...}` value may span lines, and `WARNING` mode keeps at most 1,000 warnings per call so streaming memory stays bounded (`getWarningCount()` has the total). See [Upgrading to 1.4.2](/guide/upgrading#upgrading-to-1-4-2).
+
 ## Why Tsuku?
 
 ### Perfect for E-commerce & Data Exports

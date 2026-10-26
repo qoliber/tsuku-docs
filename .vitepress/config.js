@@ -22,7 +22,7 @@ export default {
       { text: 'API', link: '/api/' },
       { text: 'About', link: '/about' },
       {
-        text: 'v1.4.0',
+        text: 'v1.4.2',
         items: [
           { text: 'Changelog', link: '/changelog' },
           { text: 'Upgrading from 1.3', link: '/guide/upgrading' }

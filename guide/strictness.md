@@ -174,6 +174,18 @@ foreach ($stores as $store) {
 
 Warnings are not de-duplicated: a missing variable inside a `@for` produces one warning per row.
 
+At most 1,000 warnings are kept per call, the first ones (`ProcessingContext::WARNING_LIMIT`); `getWarningCount()` counts every warning, also those that were not kept. That keeps a long [`processToStream()`](/guide/streaming) export within bounded memory when every row raises a warning:
+
+```php
+// 100,000 rows, none of them has an `ean`
+$tsuku->processToStream('@for(products as p){p.sku},{p.ean}' . "\n" . '@end', [], $rows, 'products', $writer);
+
+count($tsuku->getWarnings()); // 1000 - the first 1,000
+$tsuku->getWarningCount();    // 100000
+```
+
+Up to 1.4.1 every warning was kept, about 10 MB for 100,000 rows.
+
 ## Exceptions
 
 All exceptions defined by Tsuku extend `Qoliber\Tsuku\Exception\TsukuException`, which extends `\Exception`:

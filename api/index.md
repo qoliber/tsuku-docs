@@ -23,7 +23,7 @@ $result = $tsuku->process($template, $data);
 - `__construct(StrictnessMode $strictnessMode = StrictnessMode::SILENT, DirectiveRegistry $directiveRegistry = new DirectiveRegistry(), FormatterRegistry $formatterRegistry = new FormatterRegistry(), FunctionRegistry $functionRegistry = new FunctionRegistry())`
 - `process(string $template, array $data, ?StrictnessMode $strictnessMode = null): string` - Process a template with data
 - `processToStream(string $template, array $contextData, iterable $rows, string $rowsVariable, callable $writer, ?StrictnessMode $strictnessMode = null): void` - Render row by row through a writer ([Streaming](/guide/streaming))
-- `getWarnings(): array`, `hasWarnings(): bool` - Warnings of the last call in `WARNING` mode (the instance's mode or the call's)
+- `getWarnings(): array`, `hasWarnings(): bool`, `getWarningCount(): int` - Warnings of the last call in `WARNING` mode (the instance's mode or the call's); the first 1,000 are kept, all are counted
 - `registerFunction(string $name, callable $handler): self` - Register a custom function; `\InvalidArgumentException` for a name that can never be called
 - `registerDirective(string $name, callable $handler): self` - Register a custom block directive ([Custom Directives](/guide/custom-directives))
 - `registerFormatter(string $name, callable $handler): self` - Deprecated since 1.4.1: registers the handler as a function, like `registerFunction()`
@@ -170,7 +170,7 @@ var_dump($evaluator->evaluate('qty > 0 and "sale" in tags', ['qty' => 1, 'tags' 
 
 ### Other classes
 
-- `ProcessingContext(StrictnessMode $strictnessMode = StrictnessMode::SILENT)` - holds the mode and collects warnings: `getStrictnessMode()`, `addWarning()`, `getWarnings()`, `hasWarnings()`, `clearWarnings()`
+- `ProcessingContext(StrictnessMode $strictnessMode = StrictnessMode::SILENT)` - holds the mode and collects warnings: `getStrictnessMode()`, `addWarning()`, `getWarnings()`, `hasWarnings()`, `getWarningCount()`, `clearWarnings()`; it keeps at most `WARNING_LIMIT` (1,000) warnings and counts all
 - `Template\Template(string $template)` - `render(array $data, ProcessingContext $context, DirectiveRegistry $directives, FormatterRegistry $formatters, ?FunctionRegistry $functionRegistry = null): string` (implements `Template\TemplateInterface`)
 - `Streaming\StreamingProcessor` - the implementation of `processToStream()`
 - `Support\DataAccessor`, `Support\Syntax` - internal helpers (`@internal`), not part of the public API

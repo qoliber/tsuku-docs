@@ -365,7 +365,7 @@ All built-in functions are registered automatically. Signatures as implemented: 
 - `xml(mixed $str): string` - `htmlspecialchars(ENT_QUOTES | ENT_XML1)`
 - `json(mixed $str): string` - a quoted JSON string; `"`, `'`, `<`, `>`, `&` become `"`, `'`, `<`, `>`, `&`
 - `url(mixed $str): string` - `rawurlencode()`
-- `csv(mixed $str): string` - quotes the value (doubling `"`) when it contains `,`, `"` or a line break
+- `csv(mixed $str): string` - quotes the value (doubling `"`) when it contains `,`, `"`, `\n` or `\r`
 - `escape(mixed $str, string $type = 'html'): string` - `html`, `xml`, `json`, `url` or `csv`
 
 **Date Functions:**

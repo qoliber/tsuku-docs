@@ -6,6 +6,14 @@ Tsuku 1.4.0 is a drop-in upgrade for PHP code: no public method was removed or r
 composer require qoliber/tsuku:^1.4
 ```
 
+## Upgrading to 1.4.2
+
+1.4.2 fixes bugs of 1.4.1 and needs no template or code changes in most projects; `^1.4` installs it. Three fixes can change what you see:
+
+- **`getWarnings()` returns at most 1,000 warnings per call**, the first ones. Code that counted `getWarnings()` to report how many problems a run had should read `getWarningCount()`, which counts every warning. `hasWarnings()` is unchanged.
+- **`@csv()` quotes a value holding a carriage return.** `alpha` + `\r` + `beta` was printed unquoted, and CSV readers that end a record at `\r` read two records; it is now enclosed in quotes, as a value holding `\n` already was.
+- **A quoted argument that spans lines prints its text.** A function or directive argument, or a `@?{...}` value, written as a string with a line break inside printed nothing (in `STRICT` mode as well); its line breaks are now part of the value.
+
 ## Upgrading to 1.4.1
 
 1.4.1 fixes bugs of 1.4.0 and needs no template or code changes in most projects; `^1.4` installs it. Four fixes can change what you see:

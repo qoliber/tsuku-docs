@@ -249,13 +249,14 @@ $tsuku->processToStream($template, [], [
 // 1002: C-3
 ```
 
-The strictness mode of the `Tsuku` instance applies, and `getWarnings()` returns the warnings of all pieces after the call. The sixth argument overrides the mode for one call, but warnings recorded under an override are not available from `getWarnings()` - see [Strictness Modes & Errors](/guide/strictness#per-call-mode-and-warnings).
+The strictness mode of the `Tsuku` instance applies, and `getWarnings()` returns the warnings of all pieces after the call. The sixth argument overrides the mode for one call; its warnings are returned by `getWarnings()` too - see [Strictness Modes & Errors](/guide/strictness#per-call-mode-and-warnings).
 
 ## Memory
 
 - The template is parsed once per call; each piece is rendered on its own and passed to the writer, never collected.
 - Memory for the output is bounded by the largest single piece (the header, the footer or one row), however many rows are streamed.
 - Memory for the input is up to you: a generator that fetches rows one by one keeps it small, an array of 100,000 rows is in memory before streaming starts.
+- In `WARNING` mode at most 1,000 warnings are kept per call, so a warning on every row does not grow memory with the row count either; `getWarningCount()` counts all of them (see [Warnings](/guide/strictness#warnings)). Up to 1.4.1 every warning was kept: about 10 MB for 100,000 rows.
 
 ## Next Steps
 
